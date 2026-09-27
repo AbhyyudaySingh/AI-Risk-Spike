@@ -1,0 +1,7 @@
+1464:         "📡 Live Monitor",
+1585:                 "Transactions This Hour",
+2054:                     <p>Watch the Live Monitor tab to observe the current suspicious activity vs the expected baseline.</p>
+2119:                     <h4>📡 Live Monitor</h4>
+2141:                 <li><strong>What changes:</strong> As you drag the slider, the Live Monitor updates as if that specific hour is happening right now. New data points enter the charts, baselines shift, and incidents trigger.</li>
+2176:             <p>The Live Monitor provides three primary visualizations:</p>
+2262:                 <p>You are now ready to operate the AI Fraud Spike Detector. Head to the <strong>Live Monitor</strong> tab and drag the Replay Timeline to watch the system in action!</p>

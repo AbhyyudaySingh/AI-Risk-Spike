@@ -1,0 +1,4 @@
+1492:             with open("alarm.wav", "rb") as f:
+2059:                     <p>When an alarm triggers, open the Incidents tab to review the abnormal behaviour.</p>
+2227:                 <li><strong>Open Incident:</strong> They switch to the Incidents tab and select the current incident ID.</li>
+2793:                 <p style="margin-bottom:0;"><strong>Latest incident state:</strong> {latest_state}</p>

@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+
+# Raw and generated data
+data/raw/*.csv
+data/interim/*.parquet
+data/processed/**/*.parquet
+
+# Large artifacts
+artifacts/**/*.parquet
+artifacts/**/*.npz
+
+# Virtual environments
+venv/
+.venv/
+env/

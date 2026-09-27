@@ -1,0 +1,3030 @@
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import os
+import random
+import time
+import base64
+
+
+# =========================================================
+# PAGE CONFIG
+# =========================================================
+
+st.set_page_config(
+    page_title="AI Fraud Spike Detector",
+    page_icon="🛡️",
+    layout="wide"
+)
+
+
+# =========================================================
+# CUSTOM STYLING  (modularized — all visual changes live here)
+# =========================================================
+
+st.markdown(
+    """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    /* ---- ROOT / GLOBAL RESET ---- */
+    :root {
+        --bg-base:      #000000;
+        --bg-card:      linear-gradient(145deg, #1a1a1a 0%, #000000 100%);
+        --bg-card-alt:  #0A0A0A;
+        --border:       rgba(255, 255, 255, 0.20);
+        --border-hover: rgba(255, 255, 255, 0.35);
+        --text-primary: #F9FAFB;
+        --text-secondary: #9CA3AF;
+        --text-muted:   #6B7280;
+        --accent-amber:   #F59E0B;
+        --accent-emerald: #10B981;
+        --accent-crimson: #F43F5E;
+        --accent-coral:   #FB7185;
+        --accent-cyan:    #06B6D4;
+    }
+
+    @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes softPulse {
+        0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+        70% { transform: scale(1.05); opacity: 0.8; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    @keyframes alertPulse {
+        0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+        70% { box-shadow: 0 0 0 8px rgba(244, 63, 94, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+    }
+
+    .stApp {
+        background: radial-gradient(circle at 50% 0%, #1e293b 0%, #000000 70%);
+        background-color: #000000;
+        background-attachment: fixed;
+        background-image: 
+            radial-gradient(circle at 50% 0%, rgba(30, 41, 59, 0.4) 0%, transparent 70%),
+            linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 100% 100%, 40px 40px, 40px 40px;
+        font-family: 'Inter', sans-serif;
+        color: var(--text-primary);
+    }
+
+
+    /* remove default Streamlit padding, deploy button, footer */
+    .block-container {
+        padding-top: 3.5rem;
+        padding-bottom: 2rem;
+        max-width: 1450px;
+    }
+
+    #MainMenu, footer, [data-testid="stAppDeployButton"], .stDeployButton {
+        display: none;
+    }
+    
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
+
+    footer::before {
+        content: "";
+        display: none;
+    }
+
+    /* ---- SIDEBAR ---- */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(11, 15, 23, 0.85);
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    section[data-testid="stSidebar"] .stMarkdown h2,
+    section[data-testid="stSidebar"] .stMarkdown h3 {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+    }
+
+    /* ---- TYPOGRAPHY ---- */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        font-family: 'Inter', sans-serif;
+        color: var(--text-primary);
+            }
+    
+    .stTabs h1, .stTabs h2, .stTabs h3, .stSubheader {
+            }
+    
+    
+    /* ---- TOP HEADER BAR ---- */
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1px solid;
+    }
+
+    .status-badge .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    .badge-emerald {
+        color: var(--accent-emerald);
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+    .badge-emerald .dot { background: var(--accent-emerald); }
+
+    .badge-crimson {
+        color: var(--accent-crimson);
+        background: rgba(244, 63, 94, 0.1);
+        border-color: rgba(244, 63, 94, 0.3);
+    }
+    .badge-crimson .dot { background: var(--accent-crimson); }
+
+    .badge-amber {
+        color: var(--accent-amber);
+        background: rgba(245, 158, 11, 0.1);
+        border-color: rgba(245, 158, 11, 0.3);
+    }
+    .badge-amber .dot { background: var(--accent-amber); }
+
+    .badge-neutral {
+        color: var(--text-secondary);
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--border);
+    }
+    .badge-neutral .dot { background: var(--text-muted); }
+
+    .badge-pulse .dot {
+        animation: badgePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes badgePulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(1.3); }
+    }
+    
+            100% { transform: scale(3.5); opacity: 0; }
+    }
+
+    /* ---- MAIN TITLE ---- */
+    .main-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.2rem;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+    }
+
+    
+
+    /* ---- STATUS BANNERS ---- */
+        .status-normal {
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px;
+        background: rgba(16, 185, 129, 0.08);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-left: 4px solid var(--accent-emerald);
+        margin-bottom: 1.5rem;
+        animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .status-normal h2 {
+        color: var(--accent-emerald) !important;
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        margin: 0 0 0.4rem 0 !important;
+    }
+
+    .status-normal p {
+        color: #D1D5DB;
+        font-size: 1rem;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+        .status-high {
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px;
+        background: rgba(244, 63, 94, 0.08);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(244, 63, 94, 0.3);
+        border-left: 4px solid var(--accent-crimson);
+        margin-bottom: 1.5rem;
+        animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both, alertPulse 2s infinite;
+    }
+    
+        
+    
+            50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .status-high h2 {
+        color: var(--accent-crimson) !important;
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        margin: 0 0 0.4rem 0 !important;
+    }
+
+    .status-high p {
+        color: #D1D5DB;
+        font-size: 1rem;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .status-high strong {
+        color: var(--accent-crimson);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    
+    /* ---- KPI CARD REDESIGN ---- */
+    div[data-testid="column"] {
+        /* Force streamlit columns to stretch items to equal height */
+        display: flex;
+        flex-direction: column;
+    }
+    div[data-testid="column"] > div {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    div[data-testid="column"] > div > div.element-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    div[data-testid="column"] > div > div.element-container > div.stMarkdown {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    div[data-testid="column"] > div > div.element-container > div.stMarkdown > div {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    div[data-testid="column"] > div > div.element-container > div.stMarkdown > div > p {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0 !important;
+    }
+    
+    @keyframes dataScan {
+        0% { transform: translateY(-100%); opacity: 0; }
+        10% { opacity: 0.1; }
+        90% { opacity: 0.1; }
+        100% { transform: translateY(100%); opacity: 0; }
+    }
+    
+    
+    
+    /* Signal Rails */
+    .kpi-card.tone-emerald { border-left-color: var(--accent-emerald); }
+    .kpi-card.tone-crimson { border-left-color: var(--accent-crimson); }
+    .kpi-card.tone-amber { border-left-color: var(--accent-amber); }
+    .kpi-card.tone-cyan { border-left-color: var(--accent-cyan); }
+    
+    /* Scanning effect */
+    .kpi-card::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.8), transparent);
+        height: 50%;
+        opacity: 0;
+        pointer-events: none;
+        animation: dataScan 3s ease-in-out;
+        animation-delay: 0.8s;
+    }
+    
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(255, 255, 255, 0.2);
+        /* Intense border glow on signal rail */
+        border-left-width: 4px;
+        box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 255, 255, 0.05);
+    }
+    .kpi-card.tone-emerald:hover { box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6), -4px 0 20px rgba(16, 185, 129, 0.2); }
+    .kpi-card.tone-crimson:hover { box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6), -4px 0 20px rgba(244, 63, 94, 0.2); }
+    .kpi-card.tone-amber:hover { box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6), -4px 0 20px rgba(245, 158, 11, 0.2); }
+    .kpi-card.tone-cyan:hover { box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6), -4px 0 20px rgba(6, 182, 212, 0.2); }
+
+    
+    
+    
+    
+    .kpi-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px; height: 24px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: var(--text-secondary);
+    }
+    .tone-emerald .kpi-icon { color: var(--accent-emerald); background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); }
+    .tone-crimson .kpi-icon { color: var(--accent-crimson); background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.2); }
+    .tone-amber .kpi-icon { color: var(--accent-amber); background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.2); }
+    .tone-cyan .kpi-icon { color: var(--accent-cyan); background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.2); }
+
+    
+    
+    .kpi-status-chip {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .kpi-status-chip.emerald { background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .kpi-status-chip.crimson { background: rgba(244, 63, 94, 0.1); color: var(--accent-crimson); border: 1px solid rgba(244, 63, 94, 0.3); }
+    .kpi-status-chip.amber { background: rgba(245, 158, 11, 0.1); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    
+    
+    
+    
+    .kpi-delta {
+        font-size: 13px;
+        font-weight: 600;
+    }
+    
+    
+    
+    .kpi-help {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+    }
+    
+    
+    .kpi-card {
+        padding: 20px 22px;
+        border-radius: 12px;
+        background: rgba(17, 24, 39, 0.65);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-left: 4px solid rgba(255, 255, 255, 0.15); /* default signal rail */
+        box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 4px 24px -4px rgba(0,0,0, 0.4);
+        transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        
+        /* Enforced Height Fix */
+        height: 180px;
+        min-height: 180px;
+        max-height: 180px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        
+        animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        animation-delay: 0.1s;
+        position: relative;
+    }
+    
+    .kpi-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        min-height: 42px;
+    }
+    
+    .kpi-label-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .kpi-label {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        margin-bottom: 0;
+        line-height: 1.3;
+        white-space: normal;
+        overflow-wrap: break-word;
+    }
+    
+    .kpi-value-wrapper {
+        display: flex;
+        align-items: center;
+        min-height: 50px;
+    }
+    
+    .kpi-value {
+        font-size: 36px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        color: #FFFFFF;
+    }
+    
+    .kpi-bottom {
+        min-height: 34px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    /* Risk Segment Meter */
+    .risk-meter {
+        display: flex;
+        gap: 4px;
+        height: 6px;
+        width: 100%;
+        margin-top: 8px;
+    }
+    .risk-segment {
+        flex: 1;
+        border-radius: 3px;
+        background: rgba(255,255,255,0.1);
+    }
+    .risk-segment.active-low { background: var(--accent-emerald); box-shadow: 0 0 8px rgba(16,185,129,0.5); }
+    .risk-segment.active-med { background: var(--accent-amber); box-shadow: 0 0 8px rgba(245,158,11,0.5); }
+    .risk-segment.active-high { background: var(--accent-coral); box-shadow: 0 0 8px rgba(251,113,133,0.5); }
+    .risk-segment.active-crit { background: var(--accent-crimson); box-shadow: 0 0 8px rgba(244,63,94,0.5); }
+
+    /* Sparkline SVG */
+    .kpi-sparkline {
+        width: 100%;
+        height: 24px;
+        margin-top: 8px;
+        opacity: 0.6;
+    }
+/* ---- INFO / STEP CARDS ---- */
+    .info-card {
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(17, 24, 39, 0.65);
+        backdrop-filter: blur(16px);
+        margin-bottom: 1rem;
+        animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        animation-delay: 0.2s;
+    }
+
+    .step-card {
+        padding: 1.25rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        min-height: 290px;
+        transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .step-card:hover {
+        border-color: var(--border-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px -8px rgba(0,0,0,0.5);
+    }
+
+    .step-card h4 {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        color: #FFFFFF !important;
+        margin-bottom: 1rem !important;
+        display: flex;
+        align-items: center;
+    }
+
+    .step-num {
+        font-family: 'JetBrains Mono', monospace;
+        background-color: var(--accent-cyan);
+        color: #000;
+        border-radius: 6px;
+        padding: 0.2rem 0.6rem;
+        font-size: 1rem;
+        font-weight: 800;
+        margin-right: 0.6rem;
+    }
+
+    .step-card p, .step-card ul {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.95rem;
+        color: #D1D5DB;
+        line-height: 1.6;
+    }
+
+    .step-card strong {
+        color: #FFFFFF;
+    }
+
+    .step-card code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        color: var(--accent-coral);
+        background: rgba(251, 113, 133, 0.08);
+        padding: 0.1rem 0.3rem;
+        border-radius: 4px;
+    }
+
+    /* ---- INTERPRETATION PANELS ---- */
+    .interp-info {
+        padding: 1.25rem;
+        border-radius: 12px;
+        border: 1px solid rgba(6, 182, 212, 0.3);
+        background: rgba(6, 182, 212, 0.06);
+        margin-bottom: 1.25rem;
+    }
+    .interp-info p { color: #D1D5DB; font-size: 1rem; line-height: 1.6; }
+
+        .interp-error {
+        padding: 1.25rem;
+        border-radius: 6px;
+        border: 1px solid rgba(244, 63, 94, 0.2);
+        border-left: 4px solid var(--accent-crimson);
+        background: rgba(244, 63, 94, 0.04);
+        margin-bottom: 1.25rem;
+    }
+            .interp-error p { color: #D1D5DB; font-size: 1rem; line-height: 1.6; }
+    .interp-error strong { color: var(--accent-crimson); }
+
+    .interp-success {
+        padding: 1.25rem;
+        border-radius: 12px;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        background: rgba(16, 185, 129, 0.06);
+        margin-bottom: 1.25rem;
+    }
+    .interp-success p { color: #D1D5DB; font-size: 1rem; line-height: 1.6; }
+    .interp-success strong { color: var(--accent-emerald); }
+
+    /* ---- SECTION DIVIDERS ---- */
+    .section-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 1.5rem 0;
+        border: none;
+    }
+
+    /* ---- SMALL MUTED TEXT ---- */
+    .small-muted {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+    }
+
+    /* ---- STREAMLIT WIDGET OVERRIDES ---- */
+
+    /* Metric tiles */
+    [data-testid="stMetric"] {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        transition: border-color 0.2s ease;
+    }
+
+    [data-testid="stMetric"]:hover {
+        border-color: var(--border-hover);
+    }
+
+    [data-testid="stMetricLabel"] {
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+    }
+
+    [data-testid="stMetricValue"] {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.25rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        background: transparent;
+        border-radius: 0;
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        color: var(--text-secondary);
+    }
+
+    .stTabs [aria-selected="true"] {
+        color: var(--text-primary) !important;
+    }
+
+    .stTabs [data-baseweb="tab-highlight"] {
+        background: linear-gradient(90deg, var(--accent-amber), var(--accent-coral));
+        height: 2px;
+    }
+
+    .stTabs [data-baseweb="tab-border"] {
+        display: none;
+    }
+
+    /* Dataframes / tables */
+    .stDataFrame, .stTable {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(17, 24, 39, 0.65);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 4px 24px -4px rgba(0,0,0, 0.4);
+        animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        animation-delay: 0.3s;
+    }
+
+    .stDataFrame [data-testid="stDataFrameResizable"] {
+        background: var(--bg-card);
+    }
+
+    .stDataFrame table, .stTable table {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+    }
+
+    .stDataFrame thead th, .stTable thead th {
+        background: var(--bg-card-alt) !important;
+        color: var(--text-muted) !important;
+        font-size: 0.65rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border) !important;
+    }
+
+    .stDataFrame tbody td, .stTable tbody td {
+        color: var(--text-secondary) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+    }
+
+    .stDataFrame tbody tr:hover td, .stTable tbody tr:hover td {
+        background: rgba(255, 255, 255, 0.025) !important;
+    }
+
+    /* Alerts (info, error, success, warning) */
+    .stAlert {
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+
+    .stAlert > div {
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+    }
+
+    /* Sliders */
+    .stSlider > div > div > div > div {
+        background: var(--bg-base-700, #1F2937);
+    }
+
+    .stSlider [data-testid="stThumbView"] {
+        background: var(--accent-amber);
+        border: 2px solid var(--bg-base);
+        box-shadow: 0 0 0 1px var(--accent-amber), 0 0 12px -2px rgba(245, 158, 11, 0.5);
+    }
+
+    /* Progress bar */
+    .stProgress > div > div > div {
+        background: linear-gradient(90deg, var(--accent-amber), var(--accent-coral));
+    }
+
+    /* Code blocks */
+    .stCode {
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+
+    .stCode pre {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+    }
+
+    /* Selectbox */
+    .stSelectbox > div > div {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+
+    /* Headings inside tabs */
+    .stTabs h1, .stTabs h2, .stTabs h3 {
+        color: var(--text-primary);
+    }
+
+    .stTabs h2 {
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .stTabs h3 {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    /* Subheaders */
+    .stSubheader, .stMarkdown h2 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    /* Captions */
+    .stCaption, .stMarkdown em {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+    }
+
+    /* Sidebar divider */
+    section[data-testid="stSidebar"] hr {
+        border-color: var(--border);
+    }
+
+    /* Plotly chart container */
+    .js-plotly-plot .plotly .main-svg {
+        background: transparent !important;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# =========================================================
+# LOAD DATA
+# =========================================================
+
+@st.cache_data
+def load_data():
+
+    path = "artifacts/streaming/test_replay_windows.parquet"
+
+    if not os.path.exists(path):
+        return None
+
+    df = pd.read_parquet(path)
+
+    # IEEE-CIS timestamps are relative seconds from an
+    # undisclosed reference point.
+    df["relative_hour"] = (
+        df["window_start_relative"] / 3600.0
+    )
+
+    df["relative_end_hour"] = (
+        df["window_end_relative"] / 3600.0
+    )
+
+    test_start_hour = df["relative_hour"].min()
+    df["replay_hour"] = df["relative_hour"] - test_start_hour
+    df["replay_end_hour"] = df["relative_end_hour"] - test_start_hour
+
+    return df
+
+
+df = load_data()
+
+
+if df is None:
+
+    st.error(
+        "Replay data was not found.\n\n"
+        "Run `python run_demo.py --replay` first."
+    )
+
+    st.stop()
+
+
+# =========================================================
+# HELPERS
+# =========================================================
+
+def format_replay_time(replay_hour):
+
+    if pd.isna(replay_hour):
+        return "N/A"
+
+    total_hours = int(replay_hour)
+
+    day = total_hours // 24 + 1
+    hour = total_hours % 24
+
+    return f"Replay Day {day} · Hour {hour:02d}"
+
+
+def safe_percent(value):
+
+    if pd.isna(value):
+        return "N/A"
+
+    return f"{value:.2%}"
+
+
+def safe_number(value, digits=2):
+
+    if pd.isna(value):
+        return "N/A"
+
+    return f"{value:.{digits}f}"
+
+
+
+
+
+
+
+
+
+def clean_html(html_str):
+    import re
+    # Remove all leading whitespace on every line to prevent markdown from rendering as code blocks
+    return re.sub(r'^\s+', '', html_str, flags=re.MULTILINE)
+
+def get_kpi_icon(label):
+    lbl = label.lower()
+    if "transaction" in lbl:
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>'
+    elif "fraud" in lbl or "risk" in lbl:
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>'
+    elif "spike" in lbl or "z-score" in lbl:
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>'
+    elif "baseline" in lbl:
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="20" x2="22" y2="20"></line><line x1="2" y1="14" x2="22" y2="14"></line><line x1="2" y1="8" x2="22" y2="8"></line></svg>'
+    elif "incident" in lbl:
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>'
+    else:
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>'
+
+def get_status_chip(tone):
+    if tone == "emerald": return '<span class="kpi-status-chip emerald">● NORMAL</span>'
+    elif tone == "amber": return '<span class="kpi-status-chip amber">▲ WATCH</span>'
+    elif tone == "crimson": return '<span class="kpi-status-chip crimson">⚠ CRITICAL</span>'
+    return ''
+
+def get_risk_meter(value, is_percent=False):
+    # Parse float
+    try:
+        val = float(str(value).replace('%', '').replace(',', '').replace('$', ''))
+        if is_percent: val = val * 100
+    except:
+        return ""
+        
+    low_cls = "active-low" if val < 20 else ""
+    med_cls = "active-med" if 20 <= val < 60 else ""
+    high_cls = "active-high" if 60 <= val < 85 else ""
+    crit_cls = "active-crit" if val >= 85 else ""
+    
+    # If no specific active, just show the lowest threshold that it crossed
+    if val >= 85: low_cls = med_cls = high_cls = ""
+    elif val >= 60: low_cls = med_cls = ""
+    elif val >= 20: low_cls = ""
+    
+    return clean_html(f'''
+    <div class="risk-meter">
+        <div class="risk-segment {low_cls}"></div>
+        <div class="risk-segment {med_cls}"></div>
+        <div class="risk-segment {high_cls}"></div>
+        <div class="risk-segment {crit_cls}"></div>
+    </div>
+    ''')
+
+def get_sparkline(tone):
+    color = "rgba(255,255,255,0.4)"
+    if tone == "emerald": color = "#10B981"
+    elif tone == "crimson": color = "#F43F5E"
+    elif tone == "amber": color = "#F59E0B"
+    elif tone == "cyan": color = "#06B6D4"
+    
+    # Generate a randomish looking sparkline path
+    import random
+    pts = []
+    for i in range(10):
+        pts.append(f"{i*10},{random.randint(2, 22)}")
+    path = " ".join(pts)
+    
+    return clean_html(f'''
+    <svg class="kpi-sparkline" viewBox="0 0 100 24" preserveAspectRatio="none">
+        <polyline points="{path}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    ''')
+
+def kpi_card(label, value, help_text="", tone=""):
+    tone_class = f"tone-{tone}" if tone else ""
+    icon_svg = get_kpi_icon(label)
+    status_chip = get_status_chip(tone) if tone else ""
+    
+    help_html = f'<div class="kpi-help">{help_text}</div>' if help_text else ""
+    
+    micro_viz = ""
+    lbl = label.lower()
+    if "risk" in lbl or "probability" in lbl or "rate" in lbl or "precision" in lbl or "recall" in lbl:
+        micro_viz = get_risk_meter(value, is_percent=("%" in str(value)))
+    elif "transaction" in lbl or "spikes" in lbl or "amount" in lbl or "z-score" in lbl or "incident" in lbl:
+        micro_viz = get_sparkline(tone)
+    
+    # Delta (mocked for visual effect if we wanted, but we keep it clean for now)
+    delta_html = ""
+    
+    return clean_html(f'''
+<div class="kpi-card {tone_class}">
+    <div class="kpi-top">
+        <div class="kpi-label-wrapper">
+            <div class="kpi-icon">{icon_svg}</div>
+            <div class="kpi-label">{label}</div>
+        </div>
+        {status_chip}
+    </div>
+    <div class="kpi-value-wrapper">
+        <div class="kpi-value">{value}</div>
+        {delta_html}
+    </div>
+    <div class="kpi-bottom">
+        {micro_viz}
+        {help_html}
+    </div>
+</div>
+''')
+
+def status_badge(label, value, tone="neutral", pulse=False):
+
+    pulse_class = "badge-pulse" if pulse else ""
+
+    return f'<div class="status-badge badge-{tone} {pulse_class}"><span class="dot"></span><span>{label}: {value}</span></div>'
+
+
+def render_problem_ribbon(direction="left"):
+    statement = "Is there a sudden and statistically meaningful increase in suspicious activity compared with what is normally expected?"
+    
+    # Repeat the content 10 times to ensure the container is wide enough for a seamless 50% translation loop
+    chunk = f'<span class="problem-label">PROBLEM STATEMENT</span><span class="problem-sep">•</span><span class="problem-text">{statement}</span><span class="problem-sep">•</span>'
+    content = chunk * 10
+    
+    animation_class = "scroll-left" if direction == "left" else "scroll-right"
+    ribbon_class = "problem-ribbon-primary" if direction == "left" else "problem-ribbon-secondary"
+    
+    return clean_html(f'''
+    <style>
+    .problem-ribbon {{
+        width: 100%;
+        overflow: hidden;
+        background: rgba(8, 15, 30, 0.85);
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }}
+    .problem-ribbon-primary {{
+        border: 1px solid rgba(91, 140, 255, 0.20);
+        height: 42px;
+        margin-bottom: 24px;
+    }}
+    .problem-ribbon-secondary {{
+        border-top: 1px solid rgba(91, 140, 255, 0.15);
+        border-bottom: 1px solid rgba(91, 140, 255, 0.15);
+        background: rgba(8, 15, 30, 0.6);
+        height: 38px;
+        margin-top: 32px;
+        margin-bottom: 16px;
+        border-radius: 0;
+    }}
+    .problem-ribbon:hover .problem-ribbon-track {{
+        animation-play-state: paused;
+    }}
+    .problem-ribbon-track {{
+        display: inline-flex;
+        align-items: center;
+        width: max-content;
+    }}
+    .scroll-left {{
+        animation: tickerLeft 40s linear infinite;
+    }}
+    .scroll-right {{
+        animation: tickerRight 45s linear infinite;
+    }}
+    .problem-label {{
+        text-transform: uppercase;
+        font-size: 11.5px;
+        letter-spacing: 1.3px;
+        font-weight: 700;
+        color: #06B6D4;
+        margin: 0 12px;
+    }}
+    .problem-text {{
+        font-size: 13.5px;
+        color: #E5E7EB;
+        font-weight: 500;
+        margin: 0 12px;
+    }}
+    .problem-sep {{
+        color: rgba(255,255,255,0.2);
+        font-size: 10px;
+        margin: 0 12px;
+    }}
+    @keyframes tickerLeft {{
+        0% {{ transform: translateX(0); }}
+        100% {{ transform: translateX(-50%); }}
+    }}
+    @keyframes tickerRight {{
+        0% {{ transform: translateX(-50%); }}
+        100% {{ transform: translateX(0); }}
+    }}
+    @media (prefers-reduced-motion: reduce) {{
+        .scroll-left, .scroll-right {{
+            animation: none !important;
+            transform: none !important;
+        }}
+        .problem-ribbon-track {{
+            width: 100%;
+            justify-content: center;
+        }}
+    }}
+    </style>
+    <div class="problem-ribbon {ribbon_class}">
+        <div class="problem-ribbon-track {animation_class}">
+            {content}
+        </div>
+    </div>
+    ''')
+
+
+# =========================================================
+# SIDEBAR / REPLAY CONTROLS
+# =========================================================
+
+st.sidebar.header("▶ Replay Controls")
+
+st.sidebar.markdown(
+    """
+    Move through the held-out test period chronologically.
+
+    The dashboard only reveals information available
+    **up to the selected window**.
+    """
+)
+
+total_windows = len(df)
+max_idx = total_windows - 1
+
+
+time_labels = {i: format_replay_time(row['replay_hour']).replace('Replay ', '') for i, row in df.iterrows()}
+
+current_idx = st.sidebar.select_slider(
+    "Held-Out Test Replay",
+    options=list(range(total_windows)),
+    value=max_idx,
+    format_func=lambda i: time_labels[i]
+)
+
+
+current_window = df.iloc[current_idx]
+
+visible_data = df.iloc[: current_idx + 1]
+
+
+st.sidebar.progress(
+    (current_idx + 1) / total_windows
+)
+
+
+st.sidebar.caption(
+    f"Window {current_idx + 1:,} of "
+    f"{total_windows:,}"
+)
+
+
+st.sidebar.markdown("---")
+
+
+st.sidebar.markdown(
+    f"**Current Position**  \n"
+    f"{format_replay_time(current_window['replay_hour'])}"
+)
+
+
+st.sidebar.markdown(
+    f"**Detector Readiness**  \n"
+    f"{current_window['detector_state']}"
+)
+
+
+if "severity" in df.columns:
+
+    st.sidebar.markdown(
+        f"**Current Severity**  \n"
+        f"{current_window['severity']}"
+    )
+
+
+st.sidebar.markdown("---")
+
+st.sidebar.caption(
+    "Replay time is normalized to the start of the held-out test period because IEEE-CIS does not provide real calendar timestamps."
+)
+
+with st.sidebar.expander("Technical Time Details"):
+    st.markdown("Original IEEE-CIS time is measured in relative elapsed seconds from an unknown reference point.")
+
+
+# =========================================================
+# TOP HEADER BAR (HERO)
+# =========================================================
+
+hero_severity = str(current_window.get("severity", "NORMAL"))
+is_high = (hero_severity == "HIGH")
+
+sys_status_class = "high" if is_high else "normal"
+sys_status_text = "FRAUD SPIKE DETECTED" if is_high else "SYSTEM NORMAL"
+
+detector_state = str(current_window.get("detector_state", "OPERATIONAL"))
+current_pos_str = format_replay_time(current_window['replay_hour'])
+
+st.markdown(
+    clean_html(f"""
+    <style>
+    .hero-container {{
+        background: linear-gradient(145deg, #0f172a 0%, #020617 100%);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 0 20px rgba(6, 182, 212, 0.05), inset 0 0 0 1px rgba(168, 85, 247, 0.05);
+        padding: 24px 32px;
+        margin-bottom: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }}
+    
+    .hero-top {{
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }}
+    
+    .hero-title-section {{
+        display: flex;
+        gap: 16px;
+    }}
+    
+    .hero-icon-wrapper {{
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+    }}
+    
+    .hero-icon {{
+        font-size: 40px;
+        position: relative;
+        z-index: 2;
+        line-height: 1;
+    }}
+    
+    .radar-ring {{
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+    }}
+    
+    .radar-ring.ring-1 {{
+        animation-delay: 0s;
+    }}
+    
+    .radar-ring.ring-2 {{
+        animation-delay: 1.25s;
+    }}
+    
+    .hero-icon-wrapper.normal .radar-ring {{
+        border: 2px solid rgba(16, 185, 129, 0.8);
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        animation: radarPing 2.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }}
+    
+    .hero-icon-wrapper.high .radar-ring {{
+        border: 2px solid rgba(244, 63, 94, 0.8);
+        box-shadow: 0 0 15px rgba(244, 63, 94, 0.6), inset 0 0 10px rgba(244, 63, 94, 0.4);
+        animation: radarPingHigh 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }}
+    
+    .hero-icon-wrapper.high .radar-ring.ring-2 {{
+        animation-delay: 0.75s;
+    }}
+    
+    .hero-icon-wrapper.high .hero-icon {{
+        animation: iconBlink 1s infinite alternate;
+    }}
+    
+    @keyframes radarPing {{
+        0% {{ width: 40px; height: 40px; opacity: 1; }}
+        100% {{ width: 120px; height: 120px; opacity: 0; }}
+    }}
+    
+    @keyframes radarPingHigh {{
+        0% {{ width: 40px; height: 40px; opacity: 1; }}
+        100% {{ width: 140px; height: 140px; opacity: 0; }}
+    }}
+    
+    @keyframes iconBlink {{
+        0% {{ transform: scale(1); filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.8)); }}
+        100% {{ transform: scale(1.1); filter: drop-shadow(0 0 20px rgba(244, 63, 94, 1)); }}
+    }}
+    
+    .hero-title-text h1 {{
+        margin: 0;
+        padding: 0;
+        font-size: 36px;
+        font-weight: 800;
+        color: #F9FAFB;
+        letter-spacing: -0.02em;
+    }}
+    
+    .hero-subtitle {{
+        margin: 4px 0 0 0;
+        font-size: 16px;
+        color: var(--text-muted);
+        font-weight: 500;
+    }}
+    
+    .hero-status-section {{
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+    }}
+    
+    .sys-status-pill {{
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        border: 1px solid transparent;
+    }}
+    
+    .sys-status-pill.normal {{
+        background: rgba(16, 185, 129, 0.15);
+        color: #10B981;
+        border-color: rgba(16, 185, 129, 0.3);
+    }}
+    
+    .sys-status-pill.high {{
+        background: rgba(244, 63, 94, 0.15);
+        color: #F43F5E;
+        border-color: rgba(244, 63, 94, 0.3);
+    }}
+    
+    .sys-status-dot {{
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }}
+    
+    .sys-status-pill.normal .sys-status-dot {{ background: #10B981; box-shadow: 0 0 8px #10B981; }}
+    .sys-status-pill.high .sys-status-dot {{ background: #F43F5E; box-shadow: 0 0 8px #F43F5E; }}
+    
+    .replay-badge {{
+        font-size: 12px;
+        color: var(--text-muted);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-weight: 600;
+    }}
+    
+    .hero-middle {{
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }}
+    
+    .pipeline-desc {{
+        font-size: 14px;
+        color: #D1D5DB;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }}
+    
+    .pipeline-arrow {{
+        color: var(--text-muted);
+        font-size: 12px;
+    }}
+    
+    .tech-tags {{
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }}
+    
+    .tech-tag {{
+        font-size: 12px;
+        color: var(--text-secondary);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-family: 'JetBrains Mono', monospace;
+    }}
+    
+    .hero-bottom {{
+        margin-top: 4px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        gap: 24px;
+        font-size: 13px;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }}
+    
+    .hero-bottom-item {{
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }}
+    
+    .hero-bottom-item strong {{
+        color: #F9FAFB;
+        font-weight: 600;
+    }}
+    </style>
+
+    <div class="hero-container">
+        <div class="hero-top">
+            <div class="hero-title-section">
+                <div class="hero-icon-wrapper {sys_status_class}">
+                    <div class="radar-ring ring-1"></div>
+                    <div class="radar-ring ring-2"></div>
+                    <div class="hero-icon">🛡️</div>
+                </div>
+                <div class="hero-title-text">
+                    <h1>AI <span style="color: #F43F5E;">Fraud Spike</span> Detector</h1>
+                    <div class="hero-subtitle">Transaction Risk & Fraud-Spike Monitoring</div>
+                </div>
+            </div>
+            <div class="hero-status-section">
+                <div class="sys-status-pill {sys_status_class}">
+                    <div class="sys-status-dot"></div>
+                    {sys_status_text}
+                </div>
+                <div class="replay-badge">Held-Out Replay</div>
+            </div>
+        </div>
+        
+        <div class="hero-middle">
+            <div class="pipeline-desc">
+                Calibrated transaction risk <span class="pipeline-arrow">→</span> 
+                Hourly aggregation <span class="pipeline-arrow">→</span> 
+                Past-only baseline <span class="pipeline-arrow">→</span> 
+                Z-score spike detection
+            </div>
+            <div class="tech-tags">
+                <div class="tech-tag">IEEE-CIS</div>
+                <div class="tech-tag">XGBoost</div>
+                <div class="tech-tag">Sigmoid Calibration</div>
+                <div class="tech-tag">1-Hour Windows</div>
+                <div class="tech-tag">20-Window Baseline</div>
+                <div class="tech-tag">Z > 3</div>
+            </div>
+        </div>
+        
+        <div class="hero-bottom">
+            <div class="hero-bottom-item">
+                Detector: <strong>{detector_state}</strong>
+            </div>
+            <div class="hero-bottom-item">
+                Replay: <strong>{current_idx + 1} / {total_windows}</strong>
+            </div>
+            <div class="hero-bottom-item">
+                Current Window: <strong>{current_pos_str}</strong>
+            </div>
+        </div>
+    </div>
+    """),
+    unsafe_allow_html=True
+)
+
+
+# =========================================================
+# TABS
+# =========================================================
+
+st.markdown(render_problem_ribbon("left"), unsafe_allow_html=True)
+
+tab_live, tab_guide, tab_how, tab_incidents, tab_performance = st.tabs(
+    [
+        "📡 Streaming Replay Monitor",
+        "📖 Beginner's Guide",
+        "🧠 How It Works",
+        "🚨 Incidents",
+        "📊 Model Performance"
+    ]
+)
+
+
+# =========================================================
+# TAB 1 — LIVE MONITOR
+# =========================================================
+
+with tab_live:
+
+    severity = str(
+        current_window.get("severity", "NORMAL")
+    )
+
+
+    # -----------------------------------------------------
+    # STATUS BANNER
+    # -----------------------------------------------------
+
+    if severity == "HIGH":
+        
+        import base64
+        try:
+            with open("alarm.wav", "rb") as f:
+                audio_bytes = f.read()
+            audio_b64 = base64.b64encode(audio_bytes).decode()
+            st.markdown(
+                f'<audio autoplay class="stAudio" style="display:none;"><source src="data:audio/wav;base64,{audio_b64}" type="audio/wav"></audio>',
+                unsafe_allow_html=True
+            )
+        except Exception:
+            pass
+
+        st.markdown(
+            f"""
+            <div class="status-high">
+                <h2 style="margin-top:0; display: flex; align-items: center;">🚨 FRAUD SPIKE DETECTED</h2>
+                <p style="margin-bottom:0;">Suspicious transaction activity is currently
+                <strong>{safe_number(current_window["z_score"])}</strong>
+                standard deviations above its recent historical baseline.</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    else:
+
+        st.markdown(
+            """
+            <div class="status-normal">
+                <h2 style="margin-top:0;">🟢 SYSTEM NORMAL</h2>
+                <p style="margin-bottom:0;">Suspicious activity is currently within the
+                expected range defined by recent transaction behaviour.</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
+    # -----------------------------------------------------
+    # KPI ROW
+    # -----------------------------------------------------
+
+    current_rate = current_window["suspicious_rate"]
+    baseline = current_window["baseline_value"]
+    z_score = current_window["z_score"]
+
+    # --- restructured: custom KPI cards for visual hierarchy ---
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.markdown(
+            kpi_card(
+                "Suspicious Rate",
+                safe_percent(current_rate),
+                help_text=(
+                    "Percentage of transactions in this hour "
+                    "that exceeded the frozen Layer-1 fraud-risk threshold."
+                ),
+                tone="crimson" if severity == "HIGH" else "amber"
+            ),
+            unsafe_allow_html=True
+        )
+
+    with col2:
+        st.markdown(
+            kpi_card(
+                "Expected Baseline",
+                safe_percent(baseline),
+                help_text=(
+                    "Expected suspicious rate estimated using "
+                    "the previous 20 non-empty hourly windows."
+                ),
+                tone="cyan"
+            ),
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        z_tone = "crimson" if z_score > 3.0 else ("amber" if z_score > 1.5 else "emerald")
+        st.markdown(
+            kpi_card(
+                "Z-Score",
+                safe_number(z_score),
+                help_text=(
+                    "Measures how unusual the current suspicious rate "
+                    "A score above 3.0 triggers the spike detector."
+                ),
+                tone=z_tone
+            ),
+            unsafe_allow_html=True
+        )
+
+    with col4:
+        st.markdown(
+            kpi_card(
+                "Transactions This Relative Window",
+                f"{int(current_window['transaction_count']):,}",
+                help_text="Total transactions observed in the current hourly window.",
+                tone=""
+            ),
+            unsafe_allow_html=True
+        )
+
+
+    st.markdown("")
+
+
+    # -----------------------------------------------------
+    # PLAIN ENGLISH INTERPRETATION
+    # -----------------------------------------------------
+
+    st.subheader("What is happening right now?")
+
+
+    if current_window["detector_state"] == "WARMING_UP":
+
+        st.markdown(
+            """
+            <div class="interp-info">
+                <p style="margin:0;">The detector is still collecting historical windows.
+                It requires 20 previous non-empty windows before
+                the rolling baseline becomes fully operational.</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    elif current_window["detector_state"] == "NO_DATA":
+
+        st.markdown(
+            """
+            <div class="interp-info">
+                <p style="margin:0;">No transactions were observed in this window.
+                The historical baseline is preserved but is not updated.</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    elif severity == "HIGH":
+
+        difference = (
+            current_rate - baseline
+            if pd.notna(current_rate) and pd.notna(baseline)
+            else None
+        )
+
+        st.markdown(
+            f"""
+            <div class="interp-error">
+                <p style="margin-top:0;"><strong>Why was an alert generated?</strong></p>
+                <p>
+                Current suspicious rate: <strong>{safe_percent(current_rate)}</strong><br>
+                Expected recent rate: <strong>{safe_percent(baseline)}</strong><br>
+                Difference: <strong>{safe_percent(difference)}</strong><br>
+                Z-score: <strong>{safe_number(z_score)}</strong><br>
+                Frozen alert threshold: <strong>3.00</strong></p>
+                <p style="margin-bottom:0;">The system detected suspicious activity significantly
+                above its recent historical pattern.</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    else:
+
+        st.markdown(
+            f"""
+            <div class="interp-success">
+                <p style="margin-top:0;">Current suspicious activity is not sufficiently unusual
+                to trigger a fraud-spike alert.</p>
+                <p style="margin-bottom:0;">
+                <strong>Current Z-score:</strong> {safe_number(z_score)}<br>
+                <strong>Alert threshold:</strong> 3.00
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
+    st.markdown(
+        '<hr class="section-divider">',
+        unsafe_allow_html=True
+    )
+
+
+    # -----------------------------------------------------
+    # CURRENT WINDOW DETAILS
+    # -----------------------------------------------------
+
+    st.subheader("Current Hour")
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        st.markdown(
+            kpi_card(
+                "Suspicious Transactions",
+                f"{int(current_window['suspicious_count']):,}",
+                tone="amber"
+            ),
+            unsafe_allow_html=True
+        )
+
+    with c2:
+        st.markdown(
+            kpi_card(
+                "Mean Fraud Probability",
+                safe_percent(
+                    current_window.get("mean_fraud_probability")
+                ),
+                tone="crimson"
+            ),
+            unsafe_allow_html=True
+        )
+
+    high_risk_amount = current_window.get("high_risk_amount")
+
+    if pd.notna(high_risk_amount):
+        high_risk_display = f"${high_risk_amount:,.2f}"
+    else:
+        high_risk_display = "N/A"
+
+    with c3:
+        st.markdown(
+            kpi_card(
+                "High-Risk Amount",
+                high_risk_display,
+                tone="crimson"
+            ),
+            unsafe_allow_html=True
+        )
+
+    incident_id = current_window.get("incident_id")
+
+    if (
+        pd.notna(incident_id)
+        and str(incident_id).strip() != ""
+    ):
+        incident_display = str(incident_id)
+    else:
+        incident_display = "None"
+
+    with c4:
+        st.markdown(
+            kpi_card(
+                "Current Incident",
+                incident_display,
+                tone="crimson" if incident_display != "None" else ""
+            ),
+            unsafe_allow_html=True
+        )
+
+
+    st.markdown(
+        '<hr class="section-divider">',
+        unsafe_allow_html=True
+    )
+
+
+    # -----------------------------------------------------
+    # SUSPICIOUS RATE CHART
+    # -----------------------------------------------------
+
+    st.subheader("Suspicious Activity vs Expected Behaviour")
+
+    st.caption(
+        "Suspicious Rate shows observed risk in each hour. "
+        "Baseline represents recent expected behaviour. "
+        "The upper boundary is baseline + 3 standard deviations."
+    )
+
+
+    chart_data = visible_data[
+        [
+            "replay_hour",
+            "suspicious_rate",
+            "baseline_value",
+            "baseline_std"
+        ]
+    ].copy()
+
+
+    chart_data["Alert Boundary"] = (
+        chart_data["baseline_value"]
+        + 3.0 * chart_data["baseline_std"]
+    )
+
+
+    chart_data.rename(
+        columns={
+            "suspicious_rate": "Suspicious Rate",
+            "baseline_value": "Expected Baseline"
+        },
+        inplace=True
+    )
+
+
+    fig1 = go.Figure()
+    colors1 = ["#F43F5E", "#64748B", "#F59E0B"]
+    for i, col in enumerate(["Suspicious Rate", "Expected Baseline", "Alert Boundary"]):
+        fig1.add_trace(go.Scatter(
+            x=chart_data["replay_hour"], y=chart_data[col],
+            mode='lines',
+            line=dict(color=colors1[i], width=2),
+            name=col
+        ))
+    fig1.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=0, t=20, b=0),
+        xaxis=dict(showgrid=False, zeroline=False, color='#9CA3AF'),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=False, color='#9CA3AF'),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#D1D5DB")),
+        font=dict(family="'Inter', sans-serif")
+    )
+    st.plotly_chart(fig1, use_container_width=True)
+
+
+    st.markdown(
+        '<hr class="section-divider">',
+        unsafe_allow_html=True
+    )
+
+
+    # -----------------------------------------------------
+    # Z SCORE CHART
+    # -----------------------------------------------------
+
+    st.subheader("How Abnormal Is Current Activity?")
+
+
+    st.caption(
+        "A Z-score near 0 indicates normal behaviour. "
+        "The frozen detector raises an alert when Z > 3."
+    )
+
+
+    z_chart = visible_data[
+        [
+            "replay_hour",
+            "z_score"
+        ]
+    ].copy()
+
+
+    z_chart["Alert Threshold"] = 3.0
+
+
+    z_chart.rename(
+        columns={
+            "z_score": "Z-Score"
+        },
+        inplace=True
+    )
+
+
+    fig2 = go.Figure()
+    colors2 = ["#F43F5E", "#F59E0B"]
+    for i, col in enumerate(["Z-Score", "Alert Threshold"]):
+        fig2.add_trace(go.Scatter(
+            x=z_chart["replay_hour"], y=z_chart[col],
+            mode='lines',
+            line=dict(color=colors2[i], width=2),
+            name=col
+        ))
+    fig2.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=0, t=20, b=0),
+        xaxis=dict(showgrid=False, zeroline=False, color='#9CA3AF'),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=False, color='#9CA3AF'),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#D1D5DB")),
+        font=dict(family="'Inter', sans-serif")
+    )
+    st.plotly_chart(fig2, use_container_width=True)
+
+
+# =========================================================
+    
+    st.markdown(
+        '<hr class="section-divider">',
+        unsafe_allow_html=True
+    )
+
+    # -----------------------------------------------------
+    # FINANCIAL IMPACT CHART
+    # -----------------------------------------------------
+
+    st.subheader("Financial Impact (Amount at Risk)")
+
+    st.caption(
+        "Total dollar amount flagged as high-risk by the model in each hour."
+    )
+
+    money_chart = visible_data[
+        [
+            "replay_hour",
+            "high_risk_amount"
+        ]
+    ].copy()
+
+    money_chart.rename(
+        columns={
+            "high_risk_amount": "High Risk Amount ($)"
+        },
+        inplace=True
+    )
+
+    fig3 = go.Figure()
+    fig3.add_trace(go.Bar(
+        x=money_chart["replay_hour"], y=money_chart["High Risk Amount ($)"],
+        marker_color="#EF4444",
+        marker_line_color="rgba(244, 63, 94, 0.5)",
+        marker_line_width=0
+    ))
+    fig3.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=0, t=20, b=0),
+        xaxis=dict(showgrid=False, zeroline=False, color='#9CA3AF'),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=False, color='#9CA3AF'),
+        font=dict(family="'Inter', sans-serif")
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+
+    st.markdown(
+        '<hr class="section-divider">',
+        unsafe_allow_html=True
+    )
+
+    # -----------------------------------------------------
+    # TRANSACTION VOLUME CHART
+    # -----------------------------------------------------
+
+    st.subheader("Total Transaction Volume")
+
+    st.caption(
+        "Total number of transactions processed per hour."
+    )
+
+    vol_chart = visible_data[
+        [
+            "replay_hour",
+            "transaction_count"
+        ]
+    ].copy()
+
+    vol_chart.rename(
+        columns={
+            "transaction_count": "Transactions"
+        },
+        inplace=True
+    )
+
+    fig4 = go.Figure()
+    fig4.add_trace(go.Bar(
+        x=vol_chart["replay_hour"], y=vol_chart["Transactions"],
+        marker_color="#3B82F6",
+        marker_line_color="rgba(6, 182, 212, 0.5)",
+        marker_line_width=0
+    ))
+    fig4.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=0, t=20, b=0),
+        xaxis=dict(showgrid=False, zeroline=False, color='#9CA3AF'),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=False, color='#9CA3AF'),
+        font=dict(family="'Inter', sans-serif")
+    )
+    st.plotly_chart(fig4, use_container_width=True)
+
+
+# =========================================================
+# TAB 2 — BEGINNER'S GUIDE
+# =========================================================
+
+with tab_guide:
+
+    st.markdown(
+        clean_html("""
+        <style>
+        .guide-container {
+            font-family: 'Inter', sans-serif;
+            max-width: 850px;
+            margin: 0 auto;
+            color: #D1D5DB;
+            line-height: 1.7;
+        }
+        .guide-container h1 { font-size: 36px; font-weight: 800; color: #F9FAFB; margin-bottom: 8px; letter-spacing: -0.5px; }
+        .guide-container h2 { font-size: 26px; font-weight: 700; color: #F9FAFB; margin-top: 56px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .guide-container h3 { font-size: 20px; font-weight: 600; color: #E5E7EB; margin-top: 40px; margin-bottom: 16px; }
+        .guide-container p { font-size: 16px; margin-bottom: 16px; }
+        .guide-container ul, .guide-container ol { margin-bottom: 24px; padding-left: 24px; }
+        .guide-container li { font-size: 16px; margin-bottom: 8px; }
+        .guide-container strong { color: #F9FAFB; font-weight: 600; }
+        
+        .guide-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .guide-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 20px; }
+        .guide-card h4 { font-size: 16px; margin: 0 0 12px 0; color: #F9FAFB; }
+        .guide-card p { font-size: 14.5px; margin: 0; color: #9CA3AF; line-height: 1.6; }
+        
+        .guide-callout {
+            padding: 16px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 24px 0;
+            border-left: 4px solid;
+            background: rgba(255,255,255,0.03);
+        }
+        .guide-callout-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .guide-callout p { margin: 0; font-size: 15.5px; }
+        
+        .callout-key { border-left-color: #06B6D4; background: rgba(6, 182, 212, 0.05); }
+        .callout-key .guide-callout-title { color: #06B6D4; }
+        
+        .callout-example { border-left-color: #F59E0B; background: rgba(245, 158, 11, 0.05); }
+        .callout-example .guide-callout-title { color: #F59E0B; }
+        
+        .callout-important { border-left-color: #F43F5E; background: rgba(244, 63, 94, 0.05); }
+        .callout-important .guide-callout-title { color: #F43F5E; }
+        
+        .callout-tip { border-left-color: #10B981; background: rgba(16, 185, 129, 0.05); }
+        .callout-tip .guide-callout-title { color: #10B981; }
+        
+        .callout-limitation { border-left-color: #8B5CF6; background: rgba(139, 92, 246, 0.05); }
+        .callout-limitation .guide-callout-title { color: #8B5CF6; }
+        
+        .callout-dont { border-left-color: #EF4444; background: rgba(239, 68, 68, 0.05); }
+        .callout-dont .guide-callout-title { color: #EF4444; }
+
+        .guide-flow { background: rgba(8,15,30, 0.5); border: 1px solid rgba(91,140,255, 0.2); padding: 24px; border-radius: 12px; margin: 32px 0; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #9CA3AF; }
+        .guide-flow-step { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; color: #E5E7EB; margin: 8px auto; max-width: 400px; border: 1px solid rgba(255,255,255,0.1); }
+        .guide-flow-arrow { color: #06B6D4; margin: 4px 0; }
+
+        .guide-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 15px; }
+        .guide-table th, .guide-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .guide-table th { color: #F9FAFB; font-weight: 600; background: rgba(255,255,255,0.02); }
+        .guide-table td:first-child { font-weight: 600; color: #E5E7EB; width: 35%; }
+
+        .guide-start-steps { display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap; }
+        .start-step { flex: 1; min-width: 200px; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 8px; padding: 20px; position: relative; }
+        .start-step-num { position: absolute; top: -12px; left: -12px; width: 32px; height: 32px; background: #06B6D4; color: #000; font-weight: 800; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .start-step h4 { margin: 0 0 8px 0; color: #F9FAFB; font-size: 16px; }
+        .start-step p { margin: 0; font-size: 14px; color: #D1D5DB; line-height: 1.5; }
+        
+        .takeaway { margin-top: 32px; padding: 16px; background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%); border-left: 2px solid rgba(255,255,255,0.5); }
+        .takeaway-title { font-size: 12px; text-transform: uppercase; font-weight: 700; color: #9CA3AF; margin-bottom: 4px; letter-spacing: 1px; }
+        .takeaway p { margin: 0; font-size: 16px; color: #F9FAFB; font-weight: 500; }
+        </style>
+        
+        <div class="guide-container">
+            <h1>Beginner's Guide</h1>
+            <p style="font-size: 18px; color: #9CA3AF;">Welcome to the AI Fraud Spike Detector. This guide explains how to operate the dashboard and interpret the underlying fraud intelligence system.</p>
+            
+            <div class="guide-start-steps">
+                <div class="start-step">
+                    <div class="start-step-num">1</div>
+                    <h4>Control the Timeline</h4>
+                    <p>Use the Replay Progress Slider in the left sidebar to simulate time moving forward.</p>
+                </div>
+                <div class="start-step">
+                    <div class="start-step-num">2</div>
+                    <h4>Monitor Risk</h4>
+                    <p>Watch the Streaming Replay Monitor tab to observe the current suspicious activity vs the expected baseline.</p>
+                </div>
+                <div class="start-step">
+                    <div class="start-step-num">3</div>
+                    <h4>Investigate Spikes</h4>
+                    <p>When an alarm triggers, open the Incidents tab to review the abnormal behaviour.</p>
+                </div>
+            </div>
+
+            <h2>What Does This System Do?</h2>
+            <p>The AI Fraud Spike Detector is an enterprise risk-monitoring application designed to identify <strong>sudden, abnormal bursts of suspicious transaction activity</strong>.</p>
+            <p>Rather than simply blocking individual transactions, it aggregates risk to give analysts a macro-level view of potential coordinated fraud attacks in progress.</p>
+            
+            <div class="guide-flow">
+                <div class="guide-flow-step">Transaction Occurs</div>
+                <div class="guide-flow-arrow">↓</div>
+                <div class="guide-flow-step">AI Model Evaluates Risk Score</div>
+                <div class="guide-flow-arrow">↓</div>
+                <div class="guide-flow-step">High-Risk Transactions are Flagged as Suspicious</div>
+                <div class="guide-flow-arrow">↓</div>
+                <div class="guide-flow-step">Activity is Aggregated into 1-Hour Windows</div>
+                <div class="guide-flow-arrow">↓</div>
+                <div class="guide-flow-step">Current Hour is Compared to Recent Rolling Baseline</div>
+                <div class="guide-flow-arrow">↓</div>
+                <div class="guide-flow-step">Statistically Meaningful Spikes Trigger Alerts</div>
+                <div class="guide-flow-arrow">↓</div>
+                <div class="guide-flow-step">Analyst Investigates Incident</div>
+            </div>
+            
+            <div class="guide-callout callout-important">
+                <div class="guide-callout-title">✦ IMPORTANT: A Risk-Monitoring Tool, Not a Conviction System</div>
+                <p>This system highlights anomalous activity worthy of attention. It is a decision-support tool. It does NOT automatically confirm that flagged transactions are definitively fraudulent without human review.</p>
+            </div>
+
+            <h2>Understanding the Two-Layer System</h2>
+            <p>To prevent false alarms, the application separates the identification of risky transactions from the detection of a system-wide attack.</p>
+            
+            <h3>Layer 1 — Transaction Risk Scoring</h3>
+            <p>Every transaction enters a machine learning model (XGBoost) which analyzes its attributes. It outputs a <strong>Risk Score</strong> which is mathematically calibrated into a true probability of fraud.</p>
+            <p>If a transaction's calibrated fraud probability exceeds the strict threshold (<strong>0.1314</strong>), it is flagged as a <strong>Suspicious Transaction</strong>.</p>
+            
+            <div class="guide-callout callout-key">
+                <div class="guide-callout-title">✦ KEY CONCEPT: Risk Score</div>
+                <p>A statistical estimate of the probability that a transaction is fraudulent based on historical patterns. A high score means the transaction looks similar to past known fraud.</p>
+            </div>
+
+            <h3>Layer 2 — Fraud Spike Detection</h3>
+            <p>Instead of alerting analysts every time a single suspicious transaction occurs, Layer 2 looks at the <strong>aggregate suspicious activity</strong> over a fixed 1-hour window (3600 seconds).</p>
+            <p>It maintains a <strong>Rolling Baseline</strong> of the previous 20 active hours. This defines what "normal" looks like right now. The system then calculates a <strong>Z-Score</strong> to measure how far the current hour's suspicious rate deviates from this recent baseline.</p>
+            
+            <div class="guide-callout callout-example">
+                <div class="guide-callout-title">✦ EXAMPLE</div>
+                <p>Recent periods usually see a 2% suspicious rate. Suddenly, the current hour spikes to a 10% suspicious rate. The Z-Score calculates that this jump is statistically abnormal (Z > 3.0), triggering a Fraud Spike Alert.</p>
+            </div>
+            
+            <div class="takeaway">
+                <div class="takeaway-title">Key Takeaway</div>
+                <p>Layer 1 finds individual risky transactions. Layer 2 finds massive, coordinated bursts of risk.</p>
+            </div>
+
+            <h2>Dashboard Tour</h2>
+            <p>The application is divided into several tabs to help you monitor and investigate.</p>
+            
+            <div class="guide-card-grid">
+                <div class="guide-card">
+                    <h4>📡 Streaming Replay Monitor</h4>
+                    <p>Your primary view. Displays the current hourly risk, baseline expectations, Z-score, and historical charts. Use this to watch the real-time health of the system.</p>
+                </div>
+                <div class="guide-card">
+                    <h4>🚨 Incidents</h4>
+                    <p>The investigation hub. When Z-scores exceed 3.0, incidents are logged here. Allows analysts to inspect peak scores, transaction volume, and financial risk for specific attacks.</p>
+                </div>
+                <div class="guide-card">
+                    <h4>📊 Model Performance</h4>
+                    <p>Technical evaluation metrics (Precision, Recall, ROC-AUC) showing how well the underlying XGBoost model performed on the chronological test data.</p>
+                </div>
+                <div class="guide-card">
+                    <h4>🧠 Architecture</h4>
+                    <p>A technical architecture overview detailing the mathematical pipeline from raw features to final Z-score alerts.</p>
+                </div>
+            </div>
+
+            <h2>Operating the Replay Controls</h2>
+            <p>This dashboard is a <strong>chronological replay</strong> of historical held-out test data. It is not connected to a live banking feed.</p>
+            <p>You control the flow of time using the <strong>Held-Out Test Replay</strong> slider in the left sidebar.</p>
+            
+            <ul>
+                <li><strong>What changes:</strong> As you drag the slider, the Streaming Replay Monitor updates as if that specific hour is happening right now. New data points enter the charts, baselines shift, and incidents trigger.</li>
+                <li><strong>What remains fixed:</strong> The underlying ML model and detection thresholds are frozen.</li>
+            </ul>
+
+            <div class="guide-callout callout-limitation">
+                <div class="guide-callout-title">✦ LIMITATION: IEEE-CIS Timestamps</div>
+                <p>The underlying IEEE-CIS dataset obscures real calendar dates. Time is represented as elapsed seconds. Therefore, the timeline uses relative <strong>Replay Hours</strong> instead of fabricated dates.</p>
+            </div>
+
+            <h2>Quick Reference Dictionary</h2>
+            
+            <table class="guide-table">
+                <tr>
+                    <th>If you see...</th>
+                    <th>It generally means...</th>
+                </tr>
+                <tr>
+                    <td>System Normal (Green)</td>
+                    <td>Current suspicious activity is safely within the expected range of the 20-hour baseline.</td>
+                </tr>
+                <tr>
+                    <td>Fraud Spike Detected (Red)</td>
+                    <td>Suspicious activity has surged dramatically (Z-Score > 3.0). An incident has been logged.</td>
+                </tr>
+                <tr>
+                    <td>Detector: WARMING UP</td>
+                    <td>The system is still collecting its initial 20 hours of data to form a stable baseline.</td>
+                </tr>
+                <tr>
+                    <td>Detector: NO DATA</td>
+                    <td>No transactions occurred in the current hour.</td>
+                </tr>
+            </table>
+
+            <h2>Understanding the Charts</h2>
+            <p>The Streaming Replay Monitor provides three primary visualizations:</p>
+            
+            <ul>
+                <li><strong>Suspicious Activity vs Expected Behaviour:</strong> The pink line shows actual suspicious rates. The blue line is the rolling baseline. The yellow line is the Alert Boundary (+3 standard deviations). When the pink line crosses the yellow line, a spike occurs.</li>
+                <li><strong>Abnormal Activity (Z-Score):</strong> A normalized view of the panic meter. The threshold is a flat line at 3.0. This makes it instantly obvious when an hour is statistically extreme.</li>
+                <li><strong>Financial Impact:</strong> A bar chart showing the total dollar amount exposed to high-risk transactions in that specific hour.</li>
+            </ul>
+
+            <h2>Model Performance and Metrics</h2>
+            <p>Fraud detection is inherently imbalanced (there are vastly more legitimate transactions than fraudulent ones). We cannot rely on basic "accuracy" as a metric.</p>
+            <ul>
+                <li><strong>Precision:</strong> When the model flags a transaction, how often is it actually fraud?</li>
+                <li><strong>Recall:</strong> Out of all the actual fraud in the system, how much did the model successfully catch?</li>
+                <li><strong>ROC-AUC & PR-AUC:</strong> Statistical measures of the model's ability to rank fraudulent transactions higher than legitimate ones.</li>
+            </ul>
+
+            <h2>Why Chronological Evaluation Matters</h2>
+            <p>In fraud detection, patterns evolve. Fraudsters adapt to defences.</p>
+            <p>If we shuffled historical data randomly, the model might learn from "future" fraud patterns to predict "past" transactions. This is called <strong>Data Leakage</strong>.</p>
+            
+            <div class="guide-callout callout-key">
+                <div class="guide-callout-title">✦ KEY CONCEPT: Strict Chronological Split</div>
+                <p>This project isolates the earliest 70% of data for training and strictly preserves the final 15% as a held-out test set. The replay slider traverses this final 15% in exact chronological order, simulating true production conditions.</p>
+            </div>
+
+            <h2>Common Misinterpretations</h2>
+            <p>Please avoid these common pitfalls when interpreting the dashboard:</p>
+            
+            <div class="guide-callout callout-dont">
+                <div class="guide-callout-title">✦ DON'T CONFUSE: Suspicious ≠ Proven Fraud</div>
+                <p><strong>Incorrect:</strong> "Every suspicious transaction is definitively fraudulent."<br>
+                <strong>Correct:</strong> The system highlights transactions that look highly risky based on patterns. A human analyst must review the incident to confirm.</p>
+            </div>
+            
+            <div class="guide-callout callout-dont">
+                <div class="guide-callout-title">✦ DON'T CONFUSE: Normal State ≠ Zero Fraud</div>
+                <p><strong>Incorrect:</strong> "The system is Green, therefore absolutely zero fraud is occurring."<br>
+                <strong>Correct:</strong> "Normal" means the current level of suspicious activity is consistent with recent history. Baseline fraud always exists in large financial networks.</p>
+            </div>
+            
+            <div class="guide-callout callout-dont">
+                <div class="guide-callout-title">✦ DON'T CONFUSE: High Risk Score ≠ Certainty</div>
+                <p><strong>Incorrect:</strong> "A risk score of 0.8 means the transaction is 80% confirmed as fraud."<br>
+                <strong>Correct:</strong> It means there is an estimated 80% probability it is fraud, based on past similar patterns. It is not absolute certainty.</p>
+            </div>
+
+            <h2>Example Investigation Workflow</h2>
+            <p>How an analyst typically uses this system:</p>
+            <ol>
+                <li><strong>Observe the Spike:</strong> The analyst notices the top header turns red and the Z-score jumps to 4.5.</li>
+                <li><strong>Assess Impact:</strong> The analyst checks the Financial Impact chart to see if large dollar amounts are at risk.</li>
+                <li><strong>Open Incident:</strong> They switch to the Incidents tab and select the current incident ID.</li>
+                <li><strong>Review Metrics:</strong> They review the total suspicious volume and peak Z-score to determine severity.</li>
+                <li><strong>Escalate:</strong> If the attack is severe, the analyst exports the flagged transaction IDs for immediate block-listing or further forensics.</li>
+            </ol>
+            
+            <h2>Glossary</h2>
+            <ul>
+                <li><strong>Risk Score:</strong> Model-generated estimate of transaction risk.</li>
+                <li><strong>Suspicious Transaction:</strong> A transaction exceeding the 0.1314 risk threshold.</li>
+                <li><strong>Aggregation Window:</strong> A 1-hour period grouping transaction activity.</li>
+                <li><strong>Rolling Baseline:</strong> The dynamic expectation formed by looking at the previous 20 active hours.</li>
+                <li><strong>Z-Score:</strong> A statistical measurement of how many standard deviations the current rate is above the baseline.</li>
+                <li><strong>Spike:</strong> A statistically abnormal increase in suspicious activity (Z > 3.0).</li>
+                <li><strong>Data Leakage:</strong> A fatal flaw where future information accidentally influences past predictions. Prevented here by chronological splitting.</li>
+            </ul>
+
+            <h2>Frequently Asked Questions (FAQ)</h2>
+            
+            <div class="guide-callout callout-tip">
+                <div class="guide-callout-title">Does the system automatically block transactions?</div>
+                <p>No. This dashboard monitors aggregate risk to detect attacks. It is designed to alert human analysts who then authorize blocks.</p>
+            </div>
+            
+            <div class="guide-callout callout-tip">
+                <div class="guide-callout-title">Is this using live banking data?</div>
+                <p>No. This uses the public IEEE-CIS Fraud Detection dataset. It is playing back historical data in a chronological simulation.</p>
+            </div>
+            
+            <div class="guide-callout callout-tip">
+                <div class="guide-callout-title">Why isn't every high-risk transaction an incident?</div>
+                <p>Individual high-risk transactions happen constantly. The system only raises an incident when there is an organized surge (spike) of these transactions beyond what is normal.</p>
+            </div>
+
+            <div class="takeaway">
+                <div class="takeaway-title">Final Note</div>
+                <p>You are now ready to operate the AI Fraud Spike Detector. Head to the <strong>Live Monitor</strong> tab and drag the Replay Timeline to watch the system in action!</p>
+            </div>
+            
+            <br><br>
+        </div>
+        """),
+        unsafe_allow_html=True
+    )
+
+# =========================================================
+# TAB 3 — HOW IT WORKS
+# =========================================================
+
+with tab_how:
+
+    st.markdown(
+        clean_html("""
+        <style>
+        .hiw-container { font-family: 'Inter', sans-serif; max-width: 850px; margin: 0 auto; color: #D1D5DB; line-height: 1.7; }
+        .hiw-container h1 { font-size: 38px; font-weight: 800; color: #F9FAFB; margin-bottom: 8px; letter-spacing: -0.5px; }
+        .hiw-container h2 { font-size: 26px; font-weight: 700; color: #F9FAFB; margin-top: 56px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .hiw-container h3 { font-size: 20px; font-weight: 600; color: #E5E7EB; margin-top: 40px; margin-bottom: 16px; }
+        .hiw-container p { font-size: 16.5px; margin-bottom: 16px; }
+        .hiw-container ul, .hiw-container ol { margin-bottom: 24px; padding-left: 24px; font-size: 16.5px; }
+        .hiw-container li { margin-bottom: 8px; }
+
+        .hiw-subtitle { font-size: 18px; color: #9CA3AF; margin-bottom: 40px; font-weight: 500; }
+
+        .arch-flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: rgba(8,15,30, 0.5); border: 1px solid rgba(91,140,255, 0.2); padding: 24px; border-radius: 12px; margin-bottom: 40px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #E5E7EB; justify-content: center; }
+        .arch-node { background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
+        .arch-arrow { color: #06B6D4; font-weight: bold; }
+
+        .hiw-callout { padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0; border-left: 4px solid; background: rgba(255,255,255,0.03); }
+        .hiw-callout-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .hiw-callout p { margin: 0; font-size: 15.5px; }
+
+        .callout-leakage { border-left-color: #EF4444; background: rgba(239, 68, 68, 0.05); }
+        .callout-leakage .hiw-callout-title { color: #EF4444; }
+        .callout-detail { border-left-color: #8B5CF6; background: rgba(139, 92, 246, 0.05); }
+        .callout-detail .hiw-callout-title { color: #8B5CF6; }
+        .callout-distinction { border-left-color: #F59E0B; background: rgba(245, 158, 11, 0.05); }
+        .callout-distinction .hiw-callout-title { color: #F59E0B; }
+        .callout-why { border-left-color: #10B981; background: rgba(16, 185, 129, 0.05); }
+        .callout-why .hiw-callout-title { color: #10B981; }
+        .callout-offline { border-left-color: #6366F1; background: rgba(99, 102, 241, 0.05); }
+        .callout-offline .hiw-callout-title { color: #6366F1; }
+        .callout-edge { border-left-color: #EC4899; background: rgba(236, 72, 153, 0.05); }
+        .callout-edge .hiw-callout-title { color: #EC4899; }
+
+        .formula-block { background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 24px; margin: 24px 0; box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0, 0.2); }
+        .formula-title { font-size: 14px; font-weight: 700; color: #F9FAFB; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+        .formula-math { font-family: 'JetBrains Mono', monospace; font-size: 17px; color: #06B6D4; text-align: center; margin: 20px 0; padding: 16px; background: rgba(0,0,0,0.3); border-radius: 8px; overflow-x: auto; }
+        .formula-explain { font-size: 15px; color: #9CA3AF; margin: 0; }
+        .formula-explain strong { color: #E5E7EB; font-weight: 600; }
+        .formula-vars { margin-top: 16px; font-size: 14px; color: #D1D5DB; }
+        .formula-vars li { margin-bottom: 4px; }
+        .formula-vars code { color: #F59E0B; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+
+        .config-card { background: linear-gradient(145deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.6) 100%); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 24px; margin: 40px 0; }
+        .config-card-title { font-size: 16px; font-weight: 700; color: #F9FAFB; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .config-item { font-size: 14px; }
+        .config-label { color: #9CA3AF; margin-bottom: 4px; }
+        .config-val { color: #F9FAFB; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+        .example-box { background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 24px; margin: 24px 0; }
+        .example-box h4 { margin-top: 0; color: #10B981; font-size: 16px; }
+        .example-code { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #D1D5DB; margin-top: 16px; line-height: 2; }
+        
+        .data-flow-box { display: flex; gap: 24px; margin: 24px 0; flex-wrap: wrap; }
+        .data-flow-col { flex: 1; min-width: 250px; padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        .data-flow-col.allowed { background: rgba(16, 185, 129, 0.05); border-top: 4px solid #10B981; }
+        .data-flow-col.forbidden { background: rgba(239, 68, 68, 0.05); border-top: 4px solid #EF4444; }
+        .data-flow-col h4 { margin-top: 0; font-size: 15px; color: #F9FAFB; }
+        .data-flow-col ul { list-style-type: none; padding-left: 0; margin-bottom: 0; }
+        .data-flow-col li { margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .icon-check { color: #10B981; font-weight: bold; }
+        .icon-cross { color: #EF4444; font-weight: bold; }
+        </style>
+        
+        <div class="hiw-container">
+            <h1>How AI Fraud Spike Detector Works</h1>
+            <div class="hiw-subtitle">From individual transaction risk to statistically abnormal fraud activity &mdash; a two-layer, chronologically evaluated detection pipeline.</div>
+            
+            <div class="arch-flow">
+                <div class="arch-node">Transaction</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">Risk Model</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">Fraud Probability</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">Suspicious Flag</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">Time Aggregation</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">Past-Only Baseline</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">Spike Detection</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">Alert</div>
+            </div>
+
+            <div class="config-card">
+                <div class="config-card-title">Implemented Configuration</div>
+                <div class="config-grid">
+                    <div>
+                        <div class="config-label">Transaction Model</div>
+                        <div class="config-val">XGBoost (Calibrated)</div>
+                    </div>
+                    <div>
+                        <div class="config-label">Transaction Threshold</div>
+                        <div class="config-val">τ_tx = 0.1314</div>
+                    </div>
+                    <div>
+                        <div class="config-label">Aggregation Window</div>
+                        <div class="config-val">3,600 Seconds</div>
+                    </div>
+                    <div>
+                        <div class="config-label">Window Type</div>
+                        <div class="config-val">Non-overlapping Tumbling</div>
+                    </div>
+                    <div>
+                        <div class="config-label">Layer-2 Signal</div>
+                        <div class="config-val">Suspicious Rate</div>
+                    </div>
+                    <div>
+                        <div class="config-label">Baseline History</div>
+                        <div class="config-val">N = 20 Windows</div>
+                    </div>
+                    <div>
+                        <div class="config-label">Primary Detector</div>
+                        <div class="config-val">Z-Score</div>
+                    </div>
+                    <div>
+                        <div class="config-label">Spike Threshold</div>
+                        <div class="config-val">Z > 3.0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hiw-callout callout-distinction">
+                <div class="hiw-callout-title">✦ IMPORTANT DISTINCTION</div>
+                <p>This project is not merely "XGBoost predicts fraud." It is a complete monitoring system in which transaction-level risk predictions are converted into time-dependent signals, compared against a strictly past-only behavioural baseline, and transformed into statistically interpretable defensive alerts.</p>
+            </div>
+
+            <h2>Why Two Layers?</h2>
+            <p>The system separates individual risk from system-wide anomalies.</p>
+            <p><strong>Layer 1</strong> answers: <em>"How risky is this individual transaction?"</em></p>
+            <p><strong>Layer 2</strong> answers: <em>"Is risky transaction activity becoming unusually high compared with recent historical behaviour?"</em></p>
+            
+            <p>A merchant can naturally experience some risky or fraudulent transactions. One suspicious transaction ≠ fraud spike. The second layer exists because the system is interested in detecting an <strong>abnormal concentration or increase</strong> of suspicious activity over time.</p>
+
+            <h2>Chronological Data Design</h2>
+            <p>Before understanding the model, you must understand the data. The data is sorted by <code>TransactionDT</code>, which represents elapsed seconds from an unknown reference timestamp. It is NOT a real date/time.</p>
+            
+            <p>To prevent data leakage, the evaluation strictly follows chronological time:</p>
+            <ul>
+                <li><strong>Earliest 70%</strong> → Train</li>
+                <li><strong>Next 15%</strong> → Validation</li>
+                <li><strong>Latest 15%</strong> → Final Held-Out Test / Replay</li>
+            </ul>
+
+            <div class="hiw-callout callout-leakage">
+                <div class="hiw-callout-title">✦ LEAKAGE-SAFETY RULE: Same-Timestamp Handling</div>
+                <p>Transactions sharing a timestamp cannot leak information into one another. For transactions with the same <code>TransactionDT = T</code>, the system reads history only from <code>&lt; T</code>, calculates features, scores transactions, and <em>then</em> updates historical state.</p>
+            </div>
+
+            <h2>Layer 1 — Transaction-Risk Model</h2>
+            <p>For transaction <code>i</code>, defined by feature vector <strong>x<sub>i</sub></strong>, the XGBoost model generates a fraud-risk probability:</p>
+            
+            <div class="formula-block">
+                <div class="formula-title">Fraud Probability</div>
+                <div class="formula-math">p_i = P(Y_i = 1 | \mathbf{x}_i)</div>
+                <p class="formula-explain"><strong>In plain English:</strong> The calibrated probability that transaction <code>i</code> is fraudulent, given its approved past-only features.</p>
+                <ul class="formula-vars">
+                    <li><code>p_i</code> = fraud-risk probability</li>
+                    <li><code>Y_i = 1</code> = historical fraud class</li>
+                    <li><code>x_i</code> = information available at prediction time</li>
+                </ul>
+            </div>
+
+            <div class="hiw-callout callout-detail">
+                <div class="hiw-callout-title">✦ IMPLEMENTATION DETAIL: Feature Engineering</div>
+                <p>Features such as prior transaction count for entity <code>e</code> at time <code>t</code> are calculated as <code>Σ 1(entity_j = e)</code> for <code>T_j &lt; t</code>. The strict inequality ensures only transactions occurring <em>before</em> the current timestamp contribute to historical features.</p>
+            </div>
+
+            <div class="hiw-callout callout-detail">
+                <div class="hiw-callout-title">✦ IMPLEMENTATION DETAIL: Missing Value Handling</div>
+                <p>Numerical features use training-derived median imputation (<code>x_missing → Median(X_train)</code>). Categorical features map missing and unseen future categories to <code>"Unknown"</code>. This prevents validation/test knowledge from entering preprocessing.</p>
+            </div>
+
+            <h3>Probability Calibration</h3>
+            <p>The raw XGBoost scores are passed through a Sigmoid calibrator. A model can rank risky transactions well while its raw output values are not perfectly aligned with true observed frequencies. Calibration mathematically aligns the scores (<code>p_calibrated = g(p_raw)</code>) to represent a true probability.</p>
+
+            <h2>Transaction Thresholding</h2>
+            <p>Once scored, the transaction is evaluated against a fixed threshold to determine if it is suspicious.</p>
+            
+            <div class="formula-block">
+                <div class="formula-title">Suspicious Decision</div>
+                <div class="formula-math">
+                    s_i = 1 \text{ if } p_i \ge 0.1314 \text{ else } 0
+                </div>
+                <p class="formula-explain"><strong>In plain English:</strong> If the transaction's calibrated probability meets or exceeds 13.14%, it is flagged as suspicious.</p>
+            </div>
+
+            <div class="hiw-callout callout-why">
+                <div class="hiw-callout-title">✦ WHY THIS EXISTS: Why not 0.5?</div>
+                <p>Fraud detection is highly class imbalanced. A threshold of 50% would miss too many attacks. The operating threshold (<code>τ_tx = 0.1314</code>) was selected using validation behaviour to optimally balance precision, recall, and alert volume.</p>
+            </div>
+
+            <h2>Time Aggregation</h2>
+            <p>Transactions are grouped into continuous non-overlapping windows.</p>
+
+            <div class="formula-block">
+                <div class="formula-title">Window Assignment</div>
+                <div class="formula-math">
+                    window_i = \lfloor TransactionDT_i / 3600 \rfloor
+                </div>
+                <p class="formula-explain"><strong>In plain English:</strong> A transaction at elapsed second 7,500 belongs to Window 2 (covering seconds 7,200 to 10,800).</p>
+            </div>
+
+            <h3>Window-Level Mathematics</h3>
+            <p>For the set of transactions <code>W_t</code> inside window <code>t</code>, we calculate signals. The primary signal driving Layer 2 is the <strong>Suspicious Rate</strong>.</p>
+            
+            <div class="formula-block">
+                <div class="formula-title">Suspicious Rate</div>
+                <div class="formula-math">
+                    R_t = \frac{\sum_{i \in W_t} s_i}{|W_t|}
+                </div>
+                <p class="formula-explain"><strong>In plain English:</strong> The fraction of transactions in the current window whose risk score crossed the 13.14% transaction threshold.</p>
+            </div>
+
+            <div class="hiw-callout callout-edge">
+                <div class="hiw-callout-title">✦ EDGE CASE: Empty Windows</div>
+                <p>If <code>|W_t| = 0</code>, the suspicious rate is not zero; it is <code>NA</code>. No transactions observed is not mathematically the same as observing transactions with zero suspicious activity. The detector state does not update, and the internal state becomes <code>NO_DATA</code>.</p>
+            </div>
+
+            <h2>Past-Only Rolling Baseline</h2>
+            <p>To determine if the current suspicious rate <code>R_t</code> is abnormally high, we must establish a baseline. We define the historical set <code>H_t</code> using ONLY the preceding <code>N = 20</code> eligible, non-empty windows.</p>
+
+            <div class="hiw-callout callout-leakage">
+                <div class="hiw-callout-title">✦ LEAKAGE-SAFETY RULE: Current Window Exclusion</div>
+                <p><strong>Current Window ∉ Baseline(Current Window)</strong>. The baseline for window <code>t</code> MUST come from windows before <code>t</code>. If the current window were included, a spike would partially increase the "normal" level it is being compared against, weakening the anomaly measurement.</p>
+            </div>
+
+            <div class="formula-block">
+                <div class="formula-title">Baseline Statistics</div>
+                <div class="formula-math">
+                    \mu_t = \text{Mean}(H_t) \quad | \quad \sigma_t = \text{Std}(H_t)
+                </div>
+                <p class="formula-explain"><strong>In plain English:</strong> We calculate the average (<code>μ</code>) and standard deviation (<code>σ</code>) of the suspicious rates across the past 20 active hours.</p>
+            </div>
+
+            <h2>Z-Score Spike Detection</h2>
+            <p>The Z-score standardizes the deviation, serving as the final anomaly signal.</p>
+
+            <div class="formula-block">
+                <div class="formula-title">Standardized Deviation (Z-Score)</div>
+                <div class="formula-math">
+                    z_t = \frac{R_t - \mu_t}{\max(\sigma_t, \epsilon)}
+                </div>
+                <p class="formula-explain"><strong>In plain English:</strong> How many standard deviations is the current suspicious rate above the historical expectation?</p>
+                <ul class="formula-vars">
+                    <li><code>z ≈ 0</code> → current activity is close to baseline</li>
+                    <li><code>z &gt; 0</code> → suspicious activity is above baseline</li>
+                    <li><code>ε</code> → tiny epsilon to prevent division by zero when standard deviation is near perfect zero.</li>
+                </ul>
+            </div>
+
+            <h3>Alert Policy</h3>
+            <p>The final Z-score drives the dashboard alert state:</p>
+            <ul>
+                <li><strong>NORMAL:</strong> <code>z_t ≤ 3.0</code> (System is operating within expected boundaries)</li>
+                <li><strong>HIGH (SPIKE):</strong> <code>z_t &gt; 3.0</code> (Statistically abnormal surge, incident logged)</li>
+                <li><strong>WARMING_UP:</strong> History count <code>&lt; 20</code> (System collecting initial baseline)</li>
+            </ul>
+
+            <div class="example-box">
+                <h4>Illustrative Example</h4>
+                <p><em>Note: These values are illustrative and used only to explain the mathematics.</em></p>
+                <div class="example-code">
+                    Window transactions (n_t): 100<br>
+                    Suspicious transactions (S_t): 18<br>
+                    Current Suspicious Rate (R_t): 18 / 100 = 0.18 (18%)<br>
+                    <br>
+                    Past 20-window baseline mean (μ_t): 0.08 (8%)<br>
+                    Past 20-window baseline std (σ_t): 0.025 (2.5%)<br>
+                    <br>
+                    Z-score (z_t) = (0.18 - 0.08) / 0.025 = 4.0<br>
+                    <br>
+                    Condition: 4.0 > 3.0  →  <strong>SPIKE DETECTED (HIGH SEVERITY)</strong>
+                </div>
+            </div>
+
+            <h2>What Data Is Allowed Where?</h2>
+            
+            <div class="data-flow-box">
+                <div class="data-flow-col allowed">
+                    <h4>During Prediction / Replay</h4>
+                    <ul>
+                        <li><span class="icon-check">✓</span> Transaction features</li>
+                        <li><span class="icon-check">✓</span> Past historical behaviour</li>
+                        <li><span class="icon-check">✓</span> Model probability</li>
+                        <li><span class="icon-check">✓</span> Suspicious flag</li>
+                        <li><span class="icon-check">✓</span> Previous window statistics</li>
+                    </ul>
+                </div>
+                <div class="data-flow-col forbidden">
+                    <h4>Strictly Forbidden</h4>
+                    <ul>
+                        <li><span class="icon-cross">✗</span> Future transactions</li>
+                        <li><span class="icon-cross">✗</span> Future window statistics</li>
+                        <li><span class="icon-cross">✗</span> Future labels</li>
+                        <li><span class="icon-cross">✗</span> Current-window baseline contamination</li>
+                        <li><span class="icon-cross">✗</span> <code>isFraud</code> as prediction input</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>Offline Ground Truth & Evaluation</h2>
+            <p>The IEEE-CIS dataset provides transaction-level <code>isFraud</code> labels, but no native "fraud attack" incident labels. True spike ground truth must be constructed <strong>offline</strong> for evaluation.</p>
+
+            <div class="hiw-callout callout-offline">
+                <div class="hiw-callout-title">✦ OFFLINE EVALUATION ONLY</div>
+                <p>The <code>isFraud</code> label is revealed ONLY AFTER scoring for evaluation. It must NEVER enter replay prediction, aggregation risk signals, the rolling baseline, or live alert generation.</p>
+            </div>
+
+            <div class="formula-block">
+                <div class="formula-title">Offline Actual Fraud Rate</div>
+                <div class="formula-math">
+                    ActualFraudRate_t = \frac{\text{Confirmed Fraud Transactions}_t}{\text{Total Transactions}_t}
+                </div>
+            </div>
+
+            <p>Layer 1 is evaluated using standard highly imbalanced metrics:</p>
+            <ul>
+                <li><strong>Precision:</strong> <code>TP / (TP + FP)</code> (Of transactions we flagged, how many were actually fraud?)</li>
+                <li><strong>Recall:</strong> <code>TP / (TP + FN)</code> (Of actual fraudulent transactions, how many did we capture?)</li>
+            </ul>
+
+            <br><br>
+        </div>
+        """),
+        unsafe_allow_html=True
+    )
+
+
+# =========================================================
+# TAB 3 — INCIDENTS
+# =========================================================
+
+with tab_incidents:
+
+    st.header("Detected Fraud-Spike Incidents")
+
+    st.markdown(
+        """
+        Consecutive anomalous windows are grouped into incidents so that
+        analysts receive one coherent alert rather than repeated
+        independent notifications.
+        """
+    )
+
+
+    incident_df = visible_data.dropna(
+        subset=["incident_id"]
+    ).copy()
+
+
+    if len(incident_df) == 0:
+
+        st.info(
+            "No incidents have occurred yet at this point in the replay."
+        )
+
+    else:
+
+        incident_summary = (
+            incident_df
+            .groupby("incident_id")
+            .agg(
+                first_hour=("replay_hour", "min"),
+                last_hour=("replay_end_hour", "max"),
+                peak_z_score=("z_score", "max"),
+                suspicious_transactions=(
+                    "suspicious_count",
+                    "sum"
+                ),
+                high_risk_amount=(
+                    "high_risk_amount",
+                    "sum"
+                ),
+                windows=("window_id", "count"),
+                current_state=(
+                    "incident_state",
+                    "last"
+                )
+            )
+            .reset_index()
+        )
+
+
+        incident_summary[
+            "Duration (Hours)"
+        ] = (
+            incident_summary["last_hour"]
+            - incident_summary["first_hour"]
+        )
+
+
+        incident_summary.rename(
+            columns={
+                "incident_id": "Incident",
+                "first_hour": "First Trigger Hour",
+                "last_hour": "Last Observed Hour",
+                "peak_z_score": "Peak Z-Score",
+                "suspicious_transactions":
+                    "Suspicious Transactions",
+                "high_risk_amount":
+                    "High-Risk Amount ($)",
+                "windows": "Windows",
+                "current_state": "State"
+            },
+            inplace=True
+        )
+
+
+        # --- restructured: KPI cards for incident summary ---
+        metric1, metric2, metric3 = st.columns(3)
+
+        with metric1:
+            st.markdown(
+                kpi_card(
+                    "Incidents Seen So Far",
+                    str(incident_summary["Incident"].nunique()),
+                    tone="crimson"
+                ),
+                unsafe_allow_html=True
+            )
+
+        with metric2:
+            st.markdown(
+                kpi_card(
+                    "Highest Z-Score",
+                    f"{incident_summary['Peak Z-Score'].max():.2f}",
+                    tone="amber"
+                ),
+                unsafe_allow_html=True
+            )
+
+        with metric3:
+            st.markdown(
+                kpi_card(
+                    "Total High-Risk Amount",
+                    f"${incident_summary['High-Risk Amount ($)'].sum():,.2f}",
+                    tone="crimson"
+                ),
+                unsafe_allow_html=True
+            )
+
+
+        st.markdown("### Incident Feed")
+
+
+        st.dataframe(
+            incident_summary.sort_values(
+                "First Trigger Hour",
+                ascending=False
+            ),
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+        st.markdown(
+            '<hr class="section-divider">',
+            unsafe_allow_html=True
+        )
+
+
+        st.subheader("Inspect an Incident")
+
+
+        incident_choices = (
+            incident_summary["Incident"]
+            .astype(str)
+            .tolist()
+        )
+
+
+        selected_incident = st.selectbox(
+            "Select incident",
+            incident_choices
+        )
+
+
+        selected_rows = incident_df[
+            incident_df["incident_id"].astype(str)
+            == selected_incident
+        ]
+
+
+        if len(selected_rows) > 0:
+
+            first_row = selected_rows.iloc[0]
+            peak_z = selected_rows["z_score"].max()
+
+            suspicious_total = int(
+                selected_rows["suspicious_count"].sum()
+            )
+
+            high_risk_total = selected_rows[
+                "high_risk_amount"
+            ].sum()
+
+            latest_state = selected_rows.iloc[-1][
+                "incident_state"
+            ]
+
+            started_at = format_replay_time(
+                first_row["replay_hour"]
+            )
+
+            st.markdown(
+                f"""
+                <div class="info-card">
+                <h4 style="margin-top:0;">🚨 {selected_incident}</h4>
+                <p style="margin-bottom:0.2em;"><strong>Started:</strong> {started_at}</p>
+                <p style="margin-bottom:0.2em;"><strong>Peak Z-score:</strong> {peak_z:.2f}</p>
+                <p style="margin-bottom:0.2em;"><strong>Suspicious transactions:</strong> {suspicious_total}</p>
+                <p style="margin-bottom:0.2em;"><strong>High-risk amount:</strong> ${high_risk_total:,.2f}</p>
+                <p style="margin-bottom:0;"><strong>Latest incident state (OPEN means statistical surge is ongoing):</strong> {latest_state}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+
+# =========================================================
+# TAB 4 — PERFORMANCE
+# =========================================================
+
+with tab_performance:
+
+    st.header("Final Held-Out Performance")
+
+    st.markdown(
+        """
+        These are the final results on the **latest 15% chronological
+        hold-out period**.
+
+        No model, threshold or detector parameter was changed after
+        viewing these results.
+        """
+    )
+
+
+    st.markdown("### Layer 1 — Transaction Risk Model")
+
+
+    # --- restructured: KPI cards for performance metrics ---
+    p1, p2, p3, p4 = st.columns(4)
+
+    with p1:
+        st.markdown(
+            kpi_card("ROC-AUC", "0.8412", tone="emerald"),
+            unsafe_allow_html=True
+        )
+
+    with p2:
+        st.markdown(
+            kpi_card("PR-AUC", "0.2236", tone="amber"),
+            unsafe_allow_html=True
+        )
+
+    with p3:
+        st.markdown(
+            kpi_card("Precision", "27.99%", tone="cyan"),
+            unsafe_allow_html=True
+        )
+
+    with p4:
+        st.markdown(
+            kpi_card("Recall", "48.91%", tone="cyan"),
+            unsafe_allow_html=True
+        )
+
+
+    st.caption(
+        "Layer 1 identifies individual transactions with elevated fraud risk."
+    )
+
+
+    st.markdown(
+        '<hr class="section-divider">',
+        unsafe_allow_html=True
+    )
+
+
+    st.markdown("### Layer 2 — Fraud Spike Detection")
+
+
+    s1, s2, s3, s4 = st.columns(4)
+
+    with s1:
+        st.markdown(
+            kpi_card("Strict Event Precision", "21.05%", tone="amber"),
+            unsafe_allow_html=True
+        )
+
+    with s2:
+        st.markdown(
+            kpi_card("Strict Event Recall", "47.05%", tone="amber"),
+            unsafe_allow_html=True
+        )
+
+    with s3:
+        st.markdown(
+            kpi_card("+1 Hour Recall", "52.94%", tone="emerald"),
+            unsafe_allow_html=True
+        )
+
+    with s4:
+        st.markdown(
+            kpi_card("False Alert Window Rate", "3.71%", tone="crimson"),
+            unsafe_allow_html=True
+        )
+
+
+    st.caption(
+        "Layer 2 detects abnormal increases in suspicious activity "
+        "across hourly windows."
+    )
+
+
+    st.markdown(
+        '<hr class="section-divider">',
+        unsafe_allow_html=True
+    )
+
+
+    st.subheader("Validation → Test Drift")
+
+
+    comparison = pd.DataFrame(
+        {
+            "Metric": [
+                "Layer-1 ROC-AUC",
+                "Layer-1 PR-AUC",
+                "Spike Precision",
+                "Spike Recall",
+                "False Alert Window Rate"
+            ],
+
+            "Validation": [
+                "0.8796",
+                "0.2942",
+                "37.9%",
+                "68.8%",
+                "2.60%"
+            ],
+
+            "Held-Out Test": [
+                "0.8412",
+                "0.2236",
+                "21.05%",
+                "47.05%",
+                "3.71%"
+            ]
+        }
+    )
+
+
+    st.dataframe(
+        comparison,
+        use_container_width=True,
+        hide_index=True
+    )
+
+
+    st.warning(
+        """
+        The final chronological test period was more difficult than
+        validation. Spike precision and recall declined while the
+        false-alert rate increased.
+
+        The system was **not retuned on the test set**.
+
+        This behaviour is documented as temporal performance drift
+        and represents an important limitation of the current v1 system.
+        """
+    )
+
+
+    st.markdown(
+        '<hr class="section-divider">',
+        unsafe_allow_html=True
+    )
+
+
+    st.subheader("Known Limitations")
+
+
+    st.markdown(
+        """
+        <div style="font-family: 'Inter', sans-serif; display: grid; gap: 1rem; margin-top: 1rem;">
+        
+        <!-- Limitation 1 -->
+        <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.2); padding: 1.25rem; border-radius: 12px; transition: transform 0.2s ease, border-color 0.2s ease;">
+        <h4 style="margin: 0 0 0.5rem 0; color: #FFFFFF; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+        ⏳ Temporal Drift
+        </h4>
+        <p style="margin: 0; color: #D1D5DB; font-size: 0.95rem; line-height: 1.6;">
+        Changes in background fraud behaviour over long periods can make the fixed <strong>Z-score detector</strong> less reliable without periodic retraining.
+        </p>
+        </div>
+
+        <!-- Limitation 2 -->
+        <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 1.25rem; border-radius: 12px; transition: transform 0.2s ease, border-color 0.2s ease;">
+        <h4 style="margin: 0 0 0.5rem 0; color: #FFFFFF; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+        📉 Low-Volume Periods
+        </h4>
+        <p style="margin: 0; color: #D1D5DB; font-size: 0.95rem; line-height: 1.6;">
+        The Q10 volume threshold can intentionally delay incident resolution when transaction activity drops significantly (e.g., during off-hours).
+        </p>
+        </div>
+
+        <!-- Limitation 3 -->
+        <div style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); padding: 1.25rem; border-radius: 12px; transition: transform 0.2s ease, border-color 0.2s ease;">
+        <h4 style="margin: 0 0 0.5rem 0; color: #FFFFFF; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+        🧩 Limited Feature Set
+        </h4>
+        <p style="margin: 0; color: #D1D5DB; font-size: 0.95rem; line-height: 1.6;">
+        The current XGBoost model intentionally uses a <strong>controlled baseline feature subset</strong> rather than the complete, high-dimensional IEEE-CIS feature space.
+        </p>
+        </div>
+
+        <!-- Limitation 4 -->
+        <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1.25rem; border-radius: 12px; transition: transform 0.2s ease, border-color 0.2s ease;">
+        <h4 style="margin: 0 0 0.5rem 0; color: #FFFFFF; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+        💼 Research Assumptions
+        </h4>
+        <p style="margin: 0; color: #D1D5DB; font-size: 0.95rem; line-height: 1.6;">
+        Business-cost and revenue impact parameters are illustrative estimates and are not derived from a real-world merchant deployment.
+        </p>
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# =========================================================
+# FOOTER
+# =========================================================
+
+st.markdown(render_problem_ribbon("right"), unsafe_allow_html=True)
+
+st.markdown(
+    '<hr class="section-divider">',
+    unsafe_allow_html=True
+)
+
+st.caption(
+    "AI Fraud Spike Detector · "
+    "IEEE-CIS Fraud Detection · "
+    "Final Held-Out Replay · Read-Only"
+)

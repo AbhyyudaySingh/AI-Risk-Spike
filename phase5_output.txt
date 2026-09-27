@@ -1,0 +1,54 @@
+=== Starting Phase 5: Chronological Replay ===
+Verifying frozen Phase 1-4 upstream artifacts...
+Verified artifacts/models/transaction/xgb_layer1.json: cc2129b46a77d1b56701633fe6d0103c6c8489babc15946acb4a89f7cf5cef4e
+Verified artifacts/models/transaction/calibration.pkl: cf3321cbb39e659b70bb930203059e9f617aac34b5cbb81873e2962f386cad75
+Loading dataset data/processed/validation/validation.parquet...
+Pre-computing Layer-1 probabilities for FastReplayEngine...
+Starting Chronological Replay over 88581 transactions...
+Processed 10000/88581 transactions...
+Processed 20000/88581 transactions...
+Processed 30000/88581 transactions...
+Processed 40000/88581 transactions...
+--- Triggering mid-point checkpoint at transaction 44290 ---
+Pre-computing Layer-1 probabilities for FastReplayEngine...
+--- Checkpoint saved, reloaded and verified. Resuming... ---
+Processed 50000/88581 transactions...
+Processed 60000/88581 transactions...
+Processed 70000/88581 transactions...
+Processed 80000/88581 transactions...
+Replay completed.
+Generated 755 windows.
+Generated 29 alerts (incident transitions/high severity windows).
+
+--- Business Cost Simulation ---
+This simulation is strictly indicative and uses fixed assumptions.
+
+Scenario LOW: Friction=$5.0, Effectiveness=100.0%
+Note: Transaction-level cost evaluation requires Phase 3 layer which was already approved.
+
+Scenario BASE: Friction=$10.0, Effectiveness=100.0%
+Note: Transaction-level cost evaluation requires Phase 3 layer which was already approved.
+
+Scenario HIGH: Friction=$25.0, Effectiveness=100.0%
+Note: Transaction-level cost evaluation requires Phase 3 layer which was already approved.
+Verifying frozen Phase 1-4 upstream artifacts...
+Verified artifacts/models/transaction/xgb_layer1.json: cc2129b46a77d1b56701633fe6d0103c6c8489babc15946acb4a89f7cf5cef4e
+Verified artifacts/models/transaction/calibration.pkl: cf3321cbb39e659b70bb930203059e9f617aac34b5cbb81873e2962f386cad75
+Artifact immutability verified.
+
+--- Verifying Phase-4 offline output against Phase-5 replay output ---
+Offline windows: 755, Online windows: 755
+Aligned windows for comparison: 755
+Deterministic check transaction_count: 0 mismatches
+Deterministic check suspicious_count: 1 mismatches
+Traceback (most recent call last):
+  File "C:\Users\abhyu\OneDrive\Desktop\AI Risk Spike\run_phase5.py", line 109, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\abhyu\OneDrive\Desktop\AI Risk Spike\run_phase5.py", line 104, in main
+    check_equivalence()
+    ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\abhyu\OneDrive\Desktop\AI Risk Spike\run_phase5.py", line 68, in check_equivalence
+    assert mismatches == 0, f"Deterministic mismatch in {col}"
+           ^^^^^^^^^^^^^^^
+AssertionError: Deterministic mismatch in suspicious_count

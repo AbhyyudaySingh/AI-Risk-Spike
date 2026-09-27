@@ -1,0 +1,137 @@
+{
+    "features_excluded_count": 396,
+    "features_included_count": 40,
+    "sample_excluded_feature": {
+        "dist1": {
+            "reason": "High dimensionality/redundancy; excluded for v1.0 baseline to prevent overfitting."
+        }
+    },
+    "numerical_imputation_stats": {
+        "TransactionAmt": 68.95,
+        "C1": 1.0,
+        "C2": 1.0,
+        "C13": 2.0,
+        "C14": 1.0,
+        "D1": 0.0,
+        "D2": 97.0,
+        "D3": 8.0,
+        "D4": 19.0,
+        "D15": 41.0,
+        "V313": 0.0,
+        "V314": 0.0,
+        "V315": 0.0
+    },
+    "train_transformed_shape": [
+        413379,
+        56
+    ],
+    "val_transformed_shape": [
+        88581,
+        56
+    ],
+    "test_transformed_shape": [
+        88580,
+        56
+    ],
+    "missingness_indicators_created": [
+        "TransactionAmt_missing",
+        "C1_missing",
+        "C2_missing",
+        "C13_missing",
+        "C14_missing",
+        "D1_missing",
+        "D2_missing",
+        "D3_missing",
+        "D4_missing",
+        "D15_missing",
+        "V313_missing",
+        "V314_missing",
+        "V315_missing"
+    ],
+    "past_only_history_features": [
+        "history_card1_prior_tx_count",
+        "history_card1_prior_amt_sum"
+    ],
+    "historical_feature_example": [
+        {
+            "TransactionID": 2987000,
+            "TransactionDT": 86400,
+            "card1": "13926",
+            "TransactionAmt": 68.5,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987001,
+            "TransactionDT": 86401,
+            "card1": "2755",
+            "TransactionAmt": 29.0,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987002,
+            "TransactionDT": 86469,
+            "card1": "4663",
+            "TransactionAmt": 59.0,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987003,
+            "TransactionDT": 86499,
+            "card1": "18132",
+            "TransactionAmt": 50.0,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987004,
+            "TransactionDT": 86506,
+            "card1": "4497",
+            "TransactionAmt": 50.0,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987005,
+            "TransactionDT": 86510,
+            "card1": "5937",
+            "TransactionAmt": 49.0,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987006,
+            "TransactionDT": 86522,
+            "card1": "12308",
+            "TransactionAmt": 159.0,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987007,
+            "TransactionDT": 86529,
+            "card1": "12695",
+            "TransactionAmt": 422.5,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987008,
+            "TransactionDT": 86535,
+            "card1": "2803",
+            "TransactionAmt": 15.0,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        },
+        {
+            "TransactionID": 2987009,
+            "TransactionDT": 86536,
+            "card1": "17399",
+            "TransactionAmt": 117.0,
+            "history_card1_prior_tx_count": 0,
+            "history_card1_prior_amt_sum": 0.0
+        }
+    ]
+}

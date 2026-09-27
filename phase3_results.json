@@ -1,0 +1,127 @@
+{
+    "xgboost_version": "3.4.1",
+    "class_imbalance_strategy": {
+        "fraud_rate": 0.0351686950715929,
+        "scale_pos_weight": 27.434378869170448
+    },
+    "cv_folds": [
+        {
+            "fold": 1,
+            "train_size": 82675,
+            "val_size": 82675,
+            "baseline_metrics": {
+                "pr_auc": 0.060315942818027435,
+                "roc_auc": 0.6627830873247644,
+                "precision": 0.036985359961681834,
+                "recall": 0.7557446808510638
+            },
+            "xgboost_metrics": {
+                "pr_auc": 0.22689393243697736,
+                "roc_auc": 0.8030637503228242,
+                "precision": 0.1779732701742514,
+                "recall": 0.44765957446808513
+            }
+        },
+        {
+            "fold": 2,
+            "train_size": 165350,
+            "val_size": 82675,
+            "baseline_metrics": {
+                "pr_auc": 0.07421220643139016,
+                "roc_auc": 0.654923413956092,
+                "precision": 0.053011089561887714,
+                "recall": 0.915807560137457
+            },
+            "xgboost_metrics": {
+                "pr_auc": 0.2401379887062291,
+                "roc_auc": 0.8103545328951413,
+                "precision": 0.2862108922363847,
+                "recall": 0.49513172966781216
+            }
+        },
+        {
+            "fold": 3,
+            "train_size": 248025,
+            "val_size": 82675,
+            "baseline_metrics": {
+                "pr_auc": 0.10429077346079589,
+                "roc_auc": 0.6774413032066331,
+                "precision": 0.04474310728822671,
+                "recall": 0.9345524542829644
+            },
+            "xgboost_metrics": {
+                "pr_auc": 0.2585579184458269,
+                "roc_auc": 0.8489956697955434,
+                "precision": 0.24717101080737444,
+                "recall": 0.6236766121270453
+            }
+        },
+        {
+            "fold": 4,
+            "train_size": 330700,
+            "val_size": 82679,
+            "baseline_metrics": {
+                "pr_auc": 0.10152119212308824,
+                "roc_auc": 0.7017933005971266,
+                "precision": 0.04987663876929031,
+                "recall": 0.9210839785586659
+            },
+            "xgboost_metrics": {
+                "pr_auc": 0.26525118169049666,
+                "roc_auc": 0.8518108813203644,
+                "precision": 0.2551672303645246,
+                "recall": 0.6066110780226325
+            }
+        }
+    ],
+    "aggregate_oof_metrics": {
+        "pr_auc": 0.23609382866870038,
+        "roc_auc": 0.8234857675322966,
+        "precision": 0.24323741007194244,
+        "recall": 0.548997320776163
+    },
+    "calibration": {
+        "brier_score": 0.06805650144815445,
+        "mean_predicted_prob": 0.13575808703899384,
+        "mean_actual_prob": 0.03724478687890077,
+        "calibration_ratio": 3.6450225230286124
+    },
+    "calibration_adopted": false,
+    "calibration_reason": "Miscalibration detected, but blueprint defers automatic calibration to validation evidence.",
+    "final_validation_metrics": {
+        "pr_auc": 0.2941834058202778,
+        "roc_auc": 0.8795603431875956,
+        "precision": 0.2556111324868539,
+        "recall": 0.6551610782380013
+    },
+    "threshold_tuning": {
+        "selected_tau_tx": 0.4399940073490143,
+        "selected_stats": {
+            "threshold": 0.4399940073490143,
+            "precision": 0.22281449893390193,
+            "recall": 0.6870479947403024,
+            "fp": 7290,
+            "fn": 952,
+            "alert_volume": 9380,
+            "total_cost": 168100.0
+        },
+        "recall_at_precision": {
+            "Recall@Precision=0.5": 0.0009861932938856016,
+            "Recall@Precision=0.8": 0.0006574621959237344,
+            "Recall@Precision=0.9": 0.0006574621959237344
+        },
+        "justification": "Threshold minimizes overall operational cost (assumes $10 per FP alert, $100 per missed fraud chargeback)."
+    },
+    "top_10_features": {
+        "C14": 2879.468017578125,
+        "D3": 2650.71142578125,
+        "M4": 2469.409423828125,
+        "card2": 2340.07373046875,
+        "R_emaildomain": 2259.2421875,
+        "V315": 2079.244384765625,
+        "card6": 1899.514892578125,
+        "C1": 1422.0067138671875,
+        "D4_missing": 1415.344970703125,
+        "D2": 835.0427856445312
+    }
+}
