@@ -34,7 +34,7 @@ The system was evaluated over the fully unseen chronological test split (N=88,58
 
 *Note: The mild degradation reflects the increase in underlying background fraud prevalence from the Validation subset to the final chronological Test subset, proving generalization without total distribution collapse.*
 
----
+
 
 ## Installation
 
